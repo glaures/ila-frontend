@@ -83,7 +83,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 import TimeInput from '~/components/TimeInput.vue'
-import {useAuthFetch} from "~/composables/useAuthFetch.js";
 
 const weekdays = {
   MONDAY: 'Montag',
@@ -95,11 +94,9 @@ const weekdays = {
   SUNDAY: 'Sonntag',
 }
 
-const { data: blocksRaw, refresh } = await useAuthFetch('http://localhost:8080/blocks')
-const { data: periodsRaw } = await useAuthFetch('http://localhost:8080/periods')
+const { data: blocks, refresh } = await useFetch('http://localhost:8080/blocks')
+const { data: periods } = await useFetch('http://localhost:8080/periods')
 
-const blocks = ref(blocksRaw.value || [])
-const periods = ref(periodsRaw.value || [])
 const selectedPeriodId = ref(null)
 
 const filteredBlocks = computed(() => blocks.value.filter(b => b.periodId === selectedPeriodId.value))
@@ -195,14 +192,14 @@ const submitForm = async () => {
 
   try {
     if (isEditing.value) {
-      await useAuthFetch(`http://localhost:8080/blocks/${editingId.value}`, {
+      await useFetch(`http://localhost:8080/blocks/${editingId.value}`, {
         method: 'PUT',
         body: payload,
       })
       successMessage.value = 'Block aktualisiert.'
       await refresh()
     } else {
-      await useAuthFetch('http://localhost:8080/blocks', {
+      await useFetch('http://localhost:8080/blocks', {
         method: 'POST',
         body: payload,
       })
@@ -219,7 +216,7 @@ const submitForm = async () => {
 const deleteBlock = async (block) => {
   if (confirm(`Block am ${dayOfWeekLabel(block.dayOfWeek)} wirklich löschen?`)) {
     try {
-      await $fetch(`http://localhost:8080/blocks/${block.id}`, {
+      await useFetch(`http://localhost:8080/blocks/${block.id}`, {
         method: 'DELETE',
       })
       successMessage.value = 'Block gelöscht.'

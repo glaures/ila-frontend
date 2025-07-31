@@ -1,4 +1,7 @@
-export default defineNuxtRouteMiddleware(() => {
+export default defineNuxtRouteMiddleware((to, from) => {
+    if (to.path === '/auth-redirect') {
+        return
+    }
     if (process.client) {
         const token = localStorage.getItem('jwt')
         if (!token) {

@@ -119,6 +119,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 
+
 const route = useRoute()
 const router = useRouter()
 
@@ -165,12 +166,10 @@ const categoryColor = (code) => {
 }
 
 const fetchBlocks = async () => {
-  const res = await fetch("http://localhost:8080/blocks")
-  const allBlocks = await res.json()
-  blocks.value = allBlocks
+  const {data :blocks} = await useFetch("http://localhost:8080/blocks")
 
   const currentId = Number(route.params.blockId)
-  const index = allBlocks.findIndex(b => b.id === currentId)
+  const index = blocks.value.findIndex(b => b.id === currentId)
   if (index !== -1) {
     currentBlockIndex.value = index
     await fetchPreferences(currentId)
@@ -180,18 +179,17 @@ const fetchBlocks = async () => {
 }
 
 const fetchPreferences = async (blockId) => {
-  const res = await fetch(`http://localhost:8080/preferences/${blockId}`)
-  const json = await res.json()
-  pauseSelected.value = json.pauseSelected || false
+  const {data: preferenceResponse} = await useFetch(`http://localhost:8080/preferences/${blockId}`)
+  pauseSelected.value = preferenceResponse.value.pauseSelected || false
 
-  const courseMap = new Map(json.courses.map(c => [c.id, c]))
+  const courseMap = new Map(preferenceResponse.value.courses.map(c => [c.id, c]))
   // Kurse separat merken (z. B. für spätere Verwendung)
-  allCourses.value = json.courses
+  allCourses.value = preferenceResponse.value.courses
 
   // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
-  preferences.value = (json.preferences?.length > 0)
-      ? json.preferences.map(id => courseMap.get(id)).filter(Boolean)
-      : [...json.courses]
+  preferences.value = (preferenceResponse.value.preferences?.length > 0)
+      ? preferenceResponse.value.preferences.map(id => courseMap.get(id)).filter(Boolean)
+      : [...preferenceResponse.value.courses]
 }
 
 const savePreferences = async () => {
@@ -200,7 +198,7 @@ const savePreferences = async () => {
     pauseSelected: pauseSelected.value,
     preferences: preferences.value.map(c => c.id),
   }
-  await fetch(`http://localhost:8080/preferences/${currentBlock.value.id}`, {
+  await useFetch(`http://localhost:8080/preferences/${currentBlock.value.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

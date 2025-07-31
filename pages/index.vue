@@ -8,6 +8,3 @@ const iservLogin = () => {
 }
 </script>
 
-<template>
-  <button class="btn btn-primary" @click="iservLogin">Mit IServ anmelden</button>
-</template>
