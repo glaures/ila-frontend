@@ -30,7 +30,7 @@
           v-model="pauseSelected"
       />
       <label class="form-check-label" for="pauseToggle">
-        Ich möchte in diesem Block keinen Kurs belegen (selbstorganisiertes Lernen)
+        Mittagessen / Hofpause
       </label>
     </div>
 
@@ -120,6 +120,7 @@ import { useRoute, useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 
 
+const { $authFetch } = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
 
@@ -166,7 +167,7 @@ const categoryColor = (code) => {
 }
 
 const fetchBlocks = async () => {
-  const {data :blocks} = await useFetch("http://localhost:8080/blocks")
+  blocks.value = await $authFetch("http://localhost:8080/blocks")
 
   const currentId = Number(route.params.blockId)
   const index = blocks.value.findIndex(b => b.id === currentId)
@@ -179,17 +180,17 @@ const fetchBlocks = async () => {
 }
 
 const fetchPreferences = async (blockId) => {
-  const {data: preferenceResponse} = await useFetch(`http://localhost:8080/preferences/${blockId}`)
-  pauseSelected.value = preferenceResponse.value.pauseSelected || false
+  const preferencesResponse = await $authFetch(`http://localhost:8080/preferences/${blockId}`)
+  pauseSelected.value = preferencesResponse.pauseSelected || false
 
-  const courseMap = new Map(preferenceResponse.value.courses.map(c => [c.id, c]))
+  const courseMap = new Map(preferencesResponse.courses.map(c => [c.id, c]))
   // Kurse separat merken (z. B. für spätere Verwendung)
-  allCourses.value = preferenceResponse.value.courses
+  allCourses.value = preferencesResponse.courses
 
   // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
-  preferences.value = (preferenceResponse.value.preferences?.length > 0)
-      ? preferenceResponse.value.preferences.map(id => courseMap.get(id)).filter(Boolean)
-      : [...preferenceResponse.value.courses]
+  preferences.value = (preferencesResponse.preferences?.length > 0)
+      ? preferencesResponse.preferences.map(id => courseMap.get(id)).filter(Boolean)
+      : [...preferencesResponse.courses]
 }
 
 const savePreferences = async () => {
@@ -198,7 +199,7 @@ const savePreferences = async () => {
     pauseSelected: pauseSelected.value,
     preferences: preferences.value.map(c => c.id),
   }
-  await useFetch(`http://localhost:8080/preferences/${currentBlock.value.id}`, {
+  await $authFetch(`http://localhost:8080/preferences/${currentBlock.value.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
