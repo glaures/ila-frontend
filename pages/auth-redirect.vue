@@ -17,7 +17,7 @@ if (code) {
   if (response.ok) {
     const { token } = await response.json()
     localStorage.setItem('jwt', token)
-    router.replace('/preferences') // oder Startseite
+    window.location.href = '/preferences'
   } else {
     console.error('Login fehlgeschlagen')
   }

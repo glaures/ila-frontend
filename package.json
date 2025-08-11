@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "deploy": "nuxt generate --dotenv .env.production && gh-pages -d .output/public"
   },
   "dependencies": {
     "@nuxt/content": "^3.5.1",
@@ -27,6 +28,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
-    "@types/bootstrap": "^5.2.10"
+    "@types/bootstrap": "^5.2.10",
+    "gh-pages": "^6.3.0"
   }
 }

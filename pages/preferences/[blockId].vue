@@ -38,7 +38,7 @@
         class="alert alert-info"
         v-if="pauseSelected"
     >
-      Du hast für diesen Block festgelegt, dass du keinen Kurs belegen möchtest.
+      Für diesen Block möchtest oder kannst Du keinen Kurs belegen.
     </div>
 
     <!-- Kursliste -->
@@ -59,7 +59,7 @@
               <span
                   v-for="cat in element.courseCategories"
                   :key="cat"
-                  class="badge me-1 mb-1"
+                  class="badge me-1 mb-1 text-black"
                   :style="{ backgroundColor: categoryColor(cat) }"
               >
                 {{ categoryLabelMap[cat] || cat }}
@@ -87,11 +87,6 @@
       </template>
     </draggable>
 
-    <!-- Speichern -->
-    <button class="btn btn-primary mt-4" @click="savePreferences" :disabled="!currentBlock">
-      Speichern & Weiter
-    </button>
-
     <!-- Info-Modal -->
     <div class="modal fade" ref="infoModalRef" id="infoModal" tabindex="-1">
       <div class="modal-dialog modal-dialog-scrollable">
@@ -115,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 
@@ -154,16 +149,18 @@ const categoryLabelMap = {
   KuP: "Kreativität und Praxis",
   BuE: "Bewegung und Entspannung",
   FuF: "Fordern und Fördern",
+  SoL: "Selbstorganisiertes Lernen"
 }
 
 const categoryColor = (code) => {
   const colorMap = {
-    iLa: "#0d6efd",
-    KuP: "#d63384",
-    BuE: "#198754",
-    FuF: "#fd7e14",
+    iLa: "#E0E0D9",
+    KuP: "#F1938B",
+    BuE: "#B9D3B5",
+    FuF: "#FFFEA6",
+    SoL: "#000000"
   }
-  return colorMap[code] || "#6c757d"
+  return colorMap[code] || colorMap['iLa']
 }
 
 const fetchBlocks = async () => {
@@ -181,15 +178,15 @@ const fetchBlocks = async () => {
 
 const fetchPreferences = async (blockId) => {
   const preferencesResponse = await $authFetch(`http://localhost:8080/preferences/${blockId}`)
-  pauseSelected.value = preferencesResponse.pauseSelected || false
+  pauseSelected.value = preferencesResponse.pauseSelected || preferencesResponse.courses?.length === 0
 
   const courseMap = new Map(preferencesResponse.courses.map(c => [c.id, c]))
   // Kurse separat merken (z. B. für spätere Verwendung)
   allCourses.value = preferencesResponse.courses
 
   // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
-  preferences.value = (preferencesResponse.preferences?.length > 0)
-      ? preferencesResponse.preferences.map(id => courseMap.get(id)).filter(Boolean)
+  preferences.value = (preferencesResponse.preferences?.preferences.length > 0)
+      ? preferencesResponse.preferences.preferences.map(id => courseMap.get(id)).filter(Boolean)
       : [...preferencesResponse.courses]
 }
 
@@ -204,20 +201,29 @@ const savePreferences = async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  goToNextBlock()
 }
 
-const goToPreviousBlock = () => {
+const goToPreviousBlock = async () => {
   if (currentBlockIndex.value > 0) {
-    const prevBlock = blocks.value[currentBlockIndex.value - 1]
-    router.push(`/preferences/${prevBlock.id}`)
+    try {
+      await savePreferences()
+      const prevBlock = blocks.value[currentBlockIndex.value - 1]
+      router.push(`/preferences/${prevBlock.id}`)
+    } catch (err) {
+      console.error("Fehler beim Speichern vor Navigation:", err)
+    }
   }
 }
 
-const goToNextBlock = () => {
+const goToNextBlock = async () => {
   if (currentBlockIndex.value < blocks.value.length - 1) {
-    const nextBlock = blocks.value[currentBlockIndex.value + 1]
-    router.push(`/preferences/${nextBlock.id}`)
+    try {
+      await savePreferences()
+      const nextBlock = blocks.value[currentBlockIndex.value + 1]
+      router.push(`/preferences/${nextBlock.id}`)
+    } catch (err) {
+      console.error("Fehler beim Speichern vor Navigation:", err)
+    }
   }
 }
 
@@ -272,7 +278,8 @@ const closeModal = () => modalInstance?.hide()
 
 onMounted(async () => {
   await fetchBlocks()
-  if (window.bootstrap) {
+  await nextTick()
+  if (window.bootstrap && infoModalRef.value) {
     modalInstance = new window.bootstrap.Modal(infoModalRef.value)
   }
 })

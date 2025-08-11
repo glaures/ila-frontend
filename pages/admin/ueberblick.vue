@@ -5,7 +5,7 @@
 <template>
   <div>
     <h3>Überblick</h3>
-    <p>Hier kannst du Schuljahre hinzufügen, bearbeiten oder löschen.</p>
+    <p>Dies ist der Administrationsbereich zum Verwalten der wichtigsten Datenobjekte.</p>
     <!-- Später: Tabelle oder Formular -->
   </div>
 </template>

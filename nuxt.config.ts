@@ -15,5 +15,14 @@ export default defineNuxtConfig({
     plugins: ['~/plugins/bootstrap.client.ts'],
     css: ['bootstrap/dist/css/bootstrap.min.css',
         'bootstrap-icons/font/bootstrap-icons.css'],
-    ssr: false
+    ssr: false,
+    target: 'static',
+    app: {
+        baseURL: process.env.NUXT_BASE_URL || '/', // Fallback auf /
+    },
+    nitro: {
+        prerender: {
+            routes: ['/']
+        }
+    }
 })

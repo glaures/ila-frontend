@@ -1,7 +1,8 @@
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
     const authFetch = $fetch.create({
-        onRequest({ options }) {
+        onRequest({options}) {
             const token = localStorage.getItem('jwt')
+            // Stelle sicher, dass headers ein Objekt ist
             if (token) {
                 options.headers = {
                     ...options.headers,
@@ -10,19 +11,14 @@ export default defineNuxtPlugin(() => {
             }
         },
 
-        async onResponseError({ response }) {
+        onResponseError({response}) {
             if (response.status === 401) {
-                console.warn('Token ungültig oder abgelaufen – redirect zur Startseite')
-
-                // Token entfernen
+                console.warn('🔒 JWT ungültig oder abgelaufen – Redirect zur Startseite')
                 localStorage.removeItem('jwt')
-
-                // Weiterleitung zur Startseite
                 window.location.href = '/'
             }
         }
     })
 
-    // globale fetch-Instanz überschreiben
-    globalThis.$fetch = authFetch
+    nuxtApp.provide('authFetch', authFetch)
 })
