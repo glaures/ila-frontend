@@ -1,25 +1,25 @@
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
+import {useRoute} from 'vue-router'
 
 const route = useRoute()
-const router = useRouter()
 
 const code = route.query.code
 
 if (code) {
-  const redirectUri = 'http://localhost:3000/auth-redirect'
-  const response = await fetch('http://localhost:8080/auth', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirectUri }),
-  })
-
-  if (response.ok) {
-    const { token } = await response.json()
+  const config = useRuntimeConfig()
+  const redirectUri = `${config.public.baseUrl.replace(/\/$/, '')}${config.public.oauth.redirectPath}`
+  try {
+    const {token} = await $fetch(config.public.apiBase + '/auth', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: {code, redirectUri}
+    })
     localStorage.setItem('jwt', token)
-    window.location.href = '/preferences'
-  } else {
-    console.error('Login fehlgeschlagen')
+    await navigateTo('/preferences')
+  } catch (err) {
+    // err.data enthält ggf. die Fehler-Antwort vom Backend
+    console.error('Login fehlgeschlagen:', err?.data ?? err)
+    await navigateTo('/') // oder Fehlerseite
   }
 }
 </script>

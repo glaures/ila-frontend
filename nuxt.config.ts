@@ -16,13 +16,25 @@ export default defineNuxtConfig({
     css: ['bootstrap/dist/css/bootstrap.min.css',
         'bootstrap-icons/font/bootstrap-icons.css'],
     ssr: false,
-    target: 'static',
     app: {
-        baseURL: process.env.NUXT_BASE_URL || '/', // Fallback auf /
+        baseURL: process.env.NUXT_BASE_URL || '/' // Fallback auf /
     },
     nitro: {
         prerender: {
             routes: ['/']
         }
+    },
+    runtimeConfig: {
+        public: {
+            baseUrl: process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000',
+            apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
+            apiWithCredentials: process.env.NUXT_PUBLIC_API_WITH_CREDENTIALS === 'true',
+            oauth: {
+                authUrl: process.env.NUXT_PUBLIC_OAUTH_AUTH_URL || '',
+                clientId: process.env.NUXT_PUBLIC_OAUTH_CLIENT_ID || '',
+                redirectPath: process.env.NUXT_PUBLIC_OAUTH_REDIRECT_PATH || '/auth-redirect'
+            }
+        }
     }
+
 })

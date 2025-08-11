@@ -164,7 +164,7 @@ const categoryColor = (code) => {
 }
 
 const fetchBlocks = async () => {
-  blocks.value = await $authFetch("http://localhost:8080/blocks")
+  blocks.value = await $authFetch("/blocks")
 
   const currentId = Number(route.params.blockId)
   const index = blocks.value.findIndex(b => b.id === currentId)
@@ -177,7 +177,7 @@ const fetchBlocks = async () => {
 }
 
 const fetchPreferences = async (blockId) => {
-  const preferencesResponse = await $authFetch(`http://localhost:8080/preferences/${blockId}`)
+  const preferencesResponse = await $authFetch(`/preferences/${blockId}`)
   pauseSelected.value = preferencesResponse.pauseSelected || preferencesResponse.courses?.length === 0
 
   const courseMap = new Map(preferencesResponse.courses.map(c => [c.id, c]))
@@ -196,7 +196,7 @@ const savePreferences = async () => {
     pauseSelected: pauseSelected.value,
     preferences: preferences.value.map(c => c.id),
   }
-  await $authFetch(`http://localhost:8080/preferences/${currentBlock.value.id}`, {
+  await $authFetch(`/preferences/${currentBlock.value.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

@@ -6,7 +6,7 @@ const router = useRouter()
 
 onMounted(async () => {
   const { $authFetch } = useNuxtApp()
-  const blocks = await $authFetch('http://localhost:8080/blocks')
+  const blocks = await $authFetch('/blocks')
   if (blocks.length > 0) {
     const firstBlockId = blocks[0].id
     router.replace(`/preferences/${firstBlockId}`)

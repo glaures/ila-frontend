@@ -1,5 +1,9 @@
+
 export default defineNuxtPlugin((nuxtApp) => {
+    const config = useRuntimeConfig()
     const authFetch = $fetch.create({
+        baseURL: config.public.apiBase,
+        credentials: config.public.apiWithCredentials ? 'include' : 'omit',
         onRequest({options}) {
             const token = localStorage.getItem('jwt')
             // Stelle sicher, dass headers ein Objekt ist
