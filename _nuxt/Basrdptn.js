@@ -1,0 +1,1 @@
+import{_ as r,c as n,a as t,o as s}from"./thMYAFa3.js";const c={};function i(o,e){return s(),n("div",null,e[0]||(e[0]=[t("h3",null,"Überblick",-1),t("p",null,"Dies ist der Administrationsbereich zum Verwalten der wichtigsten Datenobjekte.",-1)]))}const l=r(c,[["render",i]]);export{l as default};
