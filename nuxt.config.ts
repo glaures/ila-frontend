@@ -17,13 +17,14 @@ export default defineNuxtConfig({
 
     plugins: ['~/plugins/bootstrap.client.ts'],
     css: ['bootstrap/dist/css/bootstrap.min.css',
-        'bootstrap-icons/font/bootstrap-icons.css'],
+        'bootstrap-icons/font/bootstrap-icons.css',
+        '~/assets/styles/theme.css'],
     ssr: false,
     app: {
         baseURL: process.env.NUXT_BASE_URL || '/' // Fallback auf /
     },
     nitro: {
-        preset:"gh-pages"
+        preset: "gh-pages"
     },
     hooks: {
         close: () => {

@@ -1,0 +1,45 @@
+/* ===== Projektweite Theme-Variablen ===== */
+
+/* >>> ERSETZEN: Diese zwei Farben an euer Logo anpassen <<< */
+:root {
+    /* Brand-Farben (Beispielwerte; bitte mit euren Logo-Farben ersetzen) */
+    --brand-primary: #1f4e79;         /* z. B. dunkles Blau aus dem Logo */
+    --brand-primary-rgb: 31, 78, 121; /* RGB dazu */
+    --brand-secondary: #f0b400;       /* z. B. Akzent (Gelb/Gold) */
+    --brand-secondary-rgb: 240, 180, 0;
+
+    /* Bootstrap Tokens */
+    --bs-primary: var(--brand-primary);
+    --bs-primary-rgb: var(--brand-primary-rgb);
+    --bs-secondary: var(--brand-secondary);
+    --bs-secondary-rgb: var(--brand-secondary-rgb);
+
+    /* Links */
+    --bs-link-color: var(--bs-primary);
+    --bs-link-hover-color: color-mix(in srgb, var(--bs-primary) 85%, black);
+
+    /* Optional – sanfte Töne (für .bg-*-subtle, Alerts etc.) */
+    --bs-primary-bg-subtle: color-mix(in srgb, var(--bs-primary) 15%, white);
+    --bs-primary-border-subtle: color-mix(in srgb, var(--bs-primary) 40%, white);
+    --bs-secondary-bg-subtle: color-mix(in srgb, var(--bs-secondary) 15%, white);
+    --bs-secondary-border-subtle: color-mix(in srgb, var(--bs-secondary) 40%, white);
+}
+
+/* Button-Feinschliff (bessere Hover/Active-Kontraste) */
+.btn-primary{
+    --bs-btn-bg: var(--bs-primary);
+    --bs-btn-border-color: var(--bs-primary);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--bs-primary) 92%, black);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--bs-primary) 88%, black);
+    --bs-btn-active-bg: color-mix(in srgb, var(--bs-primary) 80%, black);
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bs-primary) 75%, black);
+}
+
+.btn-secondary{
+    --bs-btn-bg: var(--bs-secondary);
+    --bs-btn-border-color: var(--bs-secondary);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--bs-secondary) 90%, black);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--bs-secondary) 85%, black);
+    --bs-btn-active-bg: color-mix(in srgb, var(--bs-secondary) 78%, black);
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bs-secondary) 72%, black);
+}
