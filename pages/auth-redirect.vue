@@ -4,7 +4,6 @@ import {useRoute} from 'vue-router'
 const route = useRoute()
 
 const code = route.query.code
-
 if (code) {
   const config = useRuntimeConfig()
   const redirectUri = `${config.public.baseUrl.replace(/\/$/, '')}${config.public.oauth.redirectPath}`

@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2024-11-01',
@@ -20,20 +23,36 @@ export default defineNuxtConfig({
         baseURL: process.env.NUXT_BASE_URL || '/' // Fallback auf /
     },
     nitro: {
-        prerender: {
-            routes: ['/']
+        preset:"gh-pages"
+    },
+    hooks: {
+        close: () => {
+            const publicDir = path.resolve('.output/public');
+            const indexFile = path.join(publicDir, 'index.html');
+            const spaFile = path.join(publicDir, '200.html');
+
+            if (fs.existsSync(indexFile)) {
+                fs.copyFileSync(indexFile, spaFile);
+                console.log('✅ 200.html erzeugt für SPA-Routing');
+            }
         }
     },
     runtimeConfig: {
         public: {
-            baseUrl: process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000',
-            apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
+            baseUrl: process.env.NUXT_PUBLIC_BASE_URL,
+            apiBase: process.env.NUXT_PUBLIC_API_BASE,
             apiWithCredentials: process.env.NUXT_PUBLIC_API_WITH_CREDENTIALS === 'true',
             oauth: {
-                authUrl: process.env.NUXT_PUBLIC_OAUTH_AUTH_URL || '',
-                clientId: process.env.NUXT_PUBLIC_OAUTH_CLIENT_ID || '',
-                redirectPath: process.env.NUXT_PUBLIC_OAUTH_REDIRECT_PATH || '/auth-redirect'
+                authUrl: process.env.NUXT_PUBLIC_OAUTH_AUTH_URL,
+                clientId: process.env.NUXT_PUBLIC_OAUTH_CLIENT_ID,
+                redirectPath: process.env.NUXT_PUBLIC_OAUTH_REDIRECT_PATH
             }
+        }
+    },
+
+    vite: {
+        build: {
+            sourcemap: true
         }
     }
 
