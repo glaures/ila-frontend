@@ -1,10 +1,16 @@
 <!-- /pages/index.vue -->
 <script setup lang="ts">
 import versionData from '~/version.json'
-definePageMeta({ authDisabled: true }) // Startseite bleibt ohne Auth erreichbar
-const { login } = useLoginRedirect()
+
+definePageMeta({
+  authDisabled: true,
+  layout: 'empty'
+})
+
+const {login} = useLoginRedirect()
 
 const isRedirecting = ref(false)
+
 function handleLogin() {
   if (isRedirecting.value) return
   isRedirecting.value = true
@@ -50,7 +56,8 @@ function handleLogin() {
           <div class="mt-3">
             <small class="text-muted">
               Probleme bei der Anmeldung? <br/>
-              Support Email an <a href="mailto:support@sandbox27.de" class="link-secondary">support@sandbox27.de</a> schreiben
+              Support Email an <a href="mailto:support@sandbox27.de" class="link-secondary">support@sandbox27.de</a>
+              schreiben
             </small>
           </div>
         </div>
@@ -58,7 +65,7 @@ function handleLogin() {
 
       <div class="text-center mt-3">
         <small class="text-muted">
-          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | v0.7.{{versionData.build}}
+          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | v0.7.{{ versionData.build }}
         </small>
       </div>
     </div>

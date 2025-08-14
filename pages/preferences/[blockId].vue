@@ -114,7 +114,6 @@ import { ref, onMounted, watch, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 
-
 const { $authFetch } = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
