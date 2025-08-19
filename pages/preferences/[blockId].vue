@@ -1,4 +1,3 @@
-
 <template>
   <div class="container-fluid py-4">
     <h2>{{ currentBlockLabel }}</h2>
@@ -22,7 +21,7 @@
     </div>
 
     <!-- Pause -->
-    <div class="form-check form-switch mb-3">
+    <div class="form-check form-switch mb-3" v-if="!alreadyAssignedCourse">
       <input
           class="form-check-input"
           type="checkbox"
@@ -32,6 +31,12 @@
       <label class="form-check-label" for="pauseToggle">
         Mittagessen / Hofpause
       </label>
+    </div>
+
+    <div v-else class="mt-4">
+      Du hast hier bereits den Kurs
+      <div class="h4 mt-2">{{ alreadyAssignedCourse.name }}</div>
+      belegt.
     </div>
 
     <div
@@ -47,14 +52,20 @@
         item-key="id"
         class="list-group"
         :disabled="pauseSelected"
-    >
+        handle=".drag-handle"
+        ghost-class="drag-ghost">
       <template #item="{ element, index }">
         <div
             class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start"
             :class="{ 'bg-warning-subtle': element.id === lastMovedId }"
         >
-          <div class="me-md-3 flex-grow-1">
-            <strong>{{ index + 1 }}. {{ element.name }}</strong>
+          <!-- Drag Handle -->
+
+          <div class="me-md-3">
+            <div>
+              <i class="bi bi-grip-vertical drag-handle me-3" aria-hidden="true"></i>
+              <strong>{{ index + 1 }}. {{ element.name }}</strong>
+            </div>
             <div class="mt-1 d-flex flex-wrap">
               <span
                   v-for="cat in element.courseCategories"
@@ -65,23 +76,30 @@
                 {{ categoryLabelMap[cat] || cat }}
               </span>
             </div>
-          </div>
-          <div class="d-flex flex-wrap gap-1 mt-2 mt-md-0">
-            <button class="btn btn-sm btn-outline-secondary" :disabled="index === 0 || pauseSelected" @click="moveUp(index)" title="Einen nach oben">
-              <i class="bi bi-chevron-up"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" :disabled="index === preferences.length - 1 || pauseSelected" @click="moveDown(index)" title="Einen nach unten">
-              <i class="bi bi-chevron-down"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" :disabled="index === 0 || pauseSelected" @click="moveToTop(index)" title="Ganz nach oben">
-              <i class="bi bi-arrow-up"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" :disabled="index === preferences.length - 1 || pauseSelected" @click="moveToBottom(index)" title="Ganz nach unten">
-              <i class="bi bi-arrow-down"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-info" @click="showInfo(element)" :disabled="pauseSelected" title="Kursinfo anzeigen">
-              <i class="bi bi-info-circle"></i>
-            </button>
+            <div class="d-flex flex-wrap gap-1 mt-2 mt-md-0">
+              <button class="btn btn-sm btn-outline-secondary" :disabled="index === 0 || pauseSelected"
+                      @click="moveUp(index)" title="Einen nach oben">
+                <i class="bi bi-chevron-up"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary"
+                      :disabled="index === preferences.length - 1 || pauseSelected" @click="moveDown(index)"
+                      title="Einen nach unten">
+                <i class="bi bi-chevron-down"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" :disabled="index === 0 || pauseSelected"
+                      @click="moveToTop(index)" title="Ganz nach oben">
+                <i class="bi bi-arrow-up"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary"
+                      :disabled="index === preferences.length - 1 || pauseSelected" @click="moveToBottom(index)"
+                      title="Ganz nach unten">
+                <i class="bi bi-arrow-down"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-info" @click="showInfo(element)" :disabled="pauseSelected"
+                      title="Kursinfo anzeigen">
+                <i class="bi bi-info-circle"></i>
+              </button>
+            </div>
           </div>
         </div>
       </template>
@@ -106,17 +124,23 @@
         </div>
       </div>
     </div>
+    <div class="position-fixed bottom-0 mb-4">
+      <ErrorBanner/>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {ref, onMounted, watch, computed, nextTick} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import draggable from 'vuedraggable'
 
-const { $authFetch } = useNuxtApp()
+const {$authFetch} = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
+import { useErrorStore } from '~/stores/error'
+const errorStore = useErrorStore()
+
 
 const blocks = ref([])
 const currentBlockIndex = ref(-1)
@@ -138,10 +162,13 @@ const currentBlockLabel = computed(() => {
 })
 
 const pauseSelected = ref(false)
-const preferences = ref([])
 const selectedCourse = ref(null)
+
 const infoModalRef = ref()
 let modalInstance = null
+
+const alreadyAssignedCourse = ref(null)
+const preferences = ref([])
 
 const categoryLabelMap = {
   iLa: "iLa",
@@ -176,17 +203,25 @@ const fetchBlocks = async () => {
 }
 
 const fetchPreferences = async (blockId) => {
-  const preferencesResponse = await $authFetch(`/preferences/${blockId}`)
-  pauseSelected.value = preferencesResponse.pauseSelected || preferencesResponse.courses?.length === 0
+  // eventuell bereits bestehende Zuordnungen
+  const assignmentsResponse = await $authFetch(`/assignments/${blockId}`)
+  if (assignmentsResponse.assignment) {
+    console.log('already assigned: ' + assignmentsResponse.assignment.course)
+    alreadyAssignedCourse.value = assignmentsResponse.assignment.course
+  } else { // Präferenzen laden
+    const preferencesResponse = await $authFetch(`/preferences/${blockId}`)
 
-  const courseMap = new Map(preferencesResponse.courses.map(c => [c.id, c]))
-  // Kurse separat merken (z. B. für spätere Verwendung)
-  allCourses.value = preferencesResponse.courses
+    pauseSelected.value = preferencesResponse.pauseSelected || preferencesResponse.courses?.length === 0
 
-  // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
-  preferences.value = (preferencesResponse.preferences?.preferences.length > 0)
-      ? preferencesResponse.preferences.preferences.map(id => courseMap.get(id)).filter(Boolean)
-      : [...preferencesResponse.courses]
+    const courseMap = new Map(preferencesResponse.courses.map(c => [c.id, c]))
+    // Kurse separat merken (z. B. für spätere Verwendung)
+    allCourses.value = preferencesResponse.courses
+
+    // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
+    preferences.value = (preferencesResponse.preferences?.preferences.length > 0)
+        ? preferencesResponse.preferences.preferences.map(id => courseMap.get(id)).filter(Boolean)
+        : [...preferencesResponse.courses]
+  }
 }
 
 const savePreferences = async () => {
@@ -197,7 +232,7 @@ const savePreferences = async () => {
   }
   await $authFetch(`/preferences/${currentBlock.value.id}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload),
   })
 }
@@ -221,6 +256,7 @@ const goToNextBlock = async () => {
       const nextBlock = blocks.value[currentBlockIndex.value + 1]
       router.push(`/preferences/${nextBlock.id}`)
     } catch (err) {
+      errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
       console.error("Fehler beim Speichern vor Navigation:", err)
     }
   }
@@ -291,3 +327,18 @@ watch(() => route.params.blockId, async (newVal) => {
   }
 })
 </script>
+
+<style>
+.drag-ghost {
+  opacity: 0.5;
+}
+
+.drag-handle {
+  cursor: grab;
+  opacity: .6;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+</style>

@@ -5,14 +5,10 @@ import {useRouter} from 'vue-router'
 const router = useRouter()
 
 onMounted(async () => {
-  const { $authFetch } = useNuxtApp()
+  const {$authFetch} = useNuxtApp()
   const blocks = await $authFetch('/blocks')
-  if (blocks.length > 0) {
-    const firstBlockId = blocks[0].id
-    router.replace(`/preferences/${firstBlockId}`)
-  } else {
-    console.warn('Keine Blöcke vorhanden')
-  }
+  const firstBlockId = blocks[0].id
+  router.replace(`/preferences/${firstBlockId}`)
 })
 </script>
 

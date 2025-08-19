@@ -16,6 +16,9 @@ function handleLogin() {
   isRedirecting.value = true
   login('/') // nach Login zur Root-Seite zurück
 }
+
+import { useErrorStore } from '~/stores/error'
+const errorStore = useErrorStore()
 </script>
 
 <template>

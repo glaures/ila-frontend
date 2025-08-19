@@ -17,9 +17,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
         onResponseError({response}) {
             if (response.status === 401) {
-                console.warn('🔒 JWT ungültig oder abgelaufen – Redirect zur Startseite')
                 localStorage.removeItem('jwt')
                 window.location.href = '/'
+                errorStore.show('Beim Laden der Daten ist ein Fehler aufgetreten')
             }
         }
     })

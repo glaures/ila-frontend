@@ -29,9 +29,11 @@
 
 <script setup>
 import {ref, onMounted} from 'vue'
+import {useUserStore} from "~/stores/user.js";
+const userStore = useUserStore()
 
 // Hier evtl. dynamische Daten holen oder aus einem Store
-const displayName = ref('Max Mustermann')
+const displayName = computed(() => userStore.username)
 
 // Platzhalter-Bild, später mit echtem Avatar ersetzen
 const avatarUrl = ref('/images/avatar_placeholder.png')
