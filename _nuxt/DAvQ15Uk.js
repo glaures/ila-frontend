@@ -1,0 +1,1 @@
+import{s as a,q as c,W as n,c as r,a as l,o as u}from"./CIyuCaAU.js";const p={class:"container py-5 text-center"},_={__name:"index",setup(d){const t=n();return a(async()=>{const{$authFetch:s}=c(),o=(await s("/blocks"))[0].id;t.replace(`/preferences/${o}`)}),(s,e)=>(u(),r("div",p,e[0]||(e[0]=[l("p",null,"Lade Kurswahl…",-1)])))}};export{_ as default};
