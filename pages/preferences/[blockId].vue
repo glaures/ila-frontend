@@ -1,9 +1,10 @@
 <template>
   <div class="container-fluid py-4">
-    <h2>{{ currentBlockLabel }}</h2>
+    <StatusCard :status="preferencesStatus"
+                v-if="preferencesStatus"/>
 
     <!-- Navigation -->
-    <div class="d-flex justify-content-between mb-3">
+    <div class="mt-3 d-flex justify-content-between mb-3">
       <button
           class="btn btn-outline-secondary btn-sm"
           :disabled="!hasPreviousBlock"
@@ -20,8 +21,15 @@
       </button>
     </div>
 
+    <div class="h4 mt-3">{{ currentBlockLabel }}</div>
+
+    <!-- Hilfetext -->
+    <div class="text-info text-xs small">
+      Bringe die Kurse in die Reihenfolge, die Deiner Präferenz entspricht. Nutze die Pfeile oder Drag & Drop.
+    </div>
+
     <!-- Pause -->
-    <div class="form-check form-switch mb-3" v-if="!alreadyAssignedCourse">
+    <div class="mt-2 form-check form-switch mb-3" v-if="!alreadyAssignedCourse">
       <input
           class="form-check-input"
           type="checkbox"
@@ -46,14 +54,17 @@
       Für diesen Block möchtest oder kannst Du keinen Kurs belegen.
     </div>
 
+
     <!-- Kursliste -->
     <draggable
+        v-if="!pauseSelected"
         v-model="preferences"
         item-key="id"
         class="list-group"
         :disabled="pauseSelected"
         handle=".drag-handle"
-        ghost-class="drag-ghost">
+        ghost-class="drag-ghost"
+        @end="onDragEnd">
       <template #item="{ element, index }">
         <div
             class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start"
@@ -138,7 +149,8 @@ import draggable from 'vuedraggable'
 const {$authFetch} = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
-import { useErrorStore } from '~/stores/error'
+import {useErrorStore} from '~/stores/error'
+
 const errorStore = useErrorStore()
 
 
@@ -146,6 +158,7 @@ const blocks = ref([])
 const currentBlockIndex = ref(-1)
 const currentBlock = computed(() => blocks.value[currentBlockIndex.value] || null)
 const allCourses = ref([])
+const preferencesStatus = ref()
 
 const currentBlockLabel = computed(() => {
   const block = currentBlock.value
@@ -189,6 +202,10 @@ const categoryColor = (code) => {
   return colorMap[code] || colorMap['iLa']
 }
 
+const fetchPreferencesStatus = async () => {
+  preferencesStatus.value = await $authFetch("/preferences-status")
+}
+
 const fetchBlocks = async () => {
   blocks.value = await $authFetch("/blocks")
 
@@ -222,6 +239,7 @@ const fetchPreferences = async (blockId) => {
         ? preferencesResponse.preferences.preferences.map(id => courseMap.get(id)).filter(Boolean)
         : [...preferencesResponse.courses]
   }
+  await fetchPreferencesStatus()
 }
 
 const savePreferences = async () => {
@@ -235,6 +253,7 @@ const savePreferences = async () => {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload),
   })
+  await fetchPreferences(currentBlock.value.id)
 }
 
 const goToPreviousBlock = async () => {
@@ -265,34 +284,44 @@ const goToNextBlock = async () => {
 const hasPreviousBlock = computed(() => currentBlockIndex.value > 0)
 const hasNextBlock = computed(() => currentBlockIndex.value < blocks.value.length - 1)
 
-const moveUp = (index) => {
+const moveUp = async (index) => {
   if (index > 0) {
     const temp = preferences.value[index - 1]
     preferences.value[index - 1] = preferences.value[index]
     preferences.value[index] = temp
     lastMovedId.value = preferences.value[index - 1].id
+    await savePreferences()
   }
 }
 
-const moveDown = (index) => {
+const moveDown = async (index) => {
   if (index < preferences.value.length - 1) {
     const temp = preferences.value[index + 1]
     preferences.value[index + 1] = preferences.value[index]
     preferences.value[index] = temp
     lastMovedId.value = preferences.value[index + 1].id
+    await savePreferences()
   }
 }
 
-const moveToTop = (index) => {
+const moveToTop = async (index) => {
   const item = preferences.value.splice(index, 1)[0]
   preferences.value.unshift(item)
   lastMovedId.value = item.id
+  await savePreferences()
 }
 
-const moveToBottom = (index) => {
+const moveToBottom = async (index) => {
   const item = preferences.value.splice(index, 1)[0]
   preferences.value.push(item)
   lastMovedId.value = item.id
+  await savePreferences()
+}
+
+const onDragEnd = async () => {
+  console.log('drag end')
+  await savePreferences()
+  await fetchPreferences(currentBlock.value.id)
 }
 
 const lastMovedId = ref(null)
@@ -317,6 +346,13 @@ onMounted(async () => {
   if (window.bootstrap && infoModalRef.value) {
     modalInstance = new window.bootstrap.Modal(infoModalRef.value)
   }
+  await fetchPreferencesStatus()
+})
+
+watch(pauseSelected, async (newVal) => {
+  console.log('pause selected: ' + newVal)
+  await savePreferences()
+  await fetchPreferences(currentBlock.value.id)
 })
 
 watch(() => route.params.blockId, async (newVal) => {
