@@ -1,1 +1,0 @@
-import{_ as t}from"./DlAUqK2U.js";import{c as n,a as r,o}from"./ASV2cBzq.js";const s={};function i(c,e){return o(),n("div",null,e[0]||(e[0]=[r("h3",null,"Überblick",-1),r("p",null,"Dies ist der Administrationsbereich zum Verwalten der wichtigsten Datenobjekte.",-1)]))}const d=t(s,[["render",i]]);export{d as default};
