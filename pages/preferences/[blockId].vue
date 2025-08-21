@@ -248,12 +248,17 @@ const savePreferences = async () => {
     pauseSelected: pauseSelected.value,
     preferences: preferences.value.map(c => c.id),
   }
-  await $authFetch(`/preferences/${currentBlock.value.id}`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload),
-  })
-  await fetchPreferences(currentBlock.value.id)
+  try {
+    await $authFetch(`/preferences/${currentBlock.value.id}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    })
+    await fetchPreferences(currentBlock.value.id)
+  } catch (err) {
+    errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
+    console.error("Fehler beim Speichern vor Navigation:", err)
+  }
 }
 
 const goToPreviousBlock = async () => {
