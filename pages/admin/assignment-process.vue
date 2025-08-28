@@ -65,11 +65,9 @@ const loading = ref(true)
 const assigning = ref(false)
 const result = ref(null)
 
-const BASE_URL = 'http://localhost:8080'
-
 async function fetchCurrentPeriod() {
   try {
-    currentPeriod.value = await $authFetch(BASE_URL + '/periods/current')
+    currentPeriod.value = await $authFetch('/periods/current')
   } catch (err) {
     console.error(err)
   } finally {
@@ -82,9 +80,10 @@ async function startAssignment() {
   assigning.value = true
   result.value = null
   try {
-    result.value = await $authFetch(`${BASE_URL}/assign/${currentPeriod.value.id}`, {
+    result.value = await $authFetch(`/assignment-process/1`, {
       method: 'POST'
     })
+    await navigateTo('/admin/assignments')
   } catch (err) {
     result.value = 'Fehler: ' + err.message
   } finally {

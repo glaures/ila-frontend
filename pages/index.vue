@@ -68,7 +68,7 @@ const errorStore = useErrorStore()
 
       <div class="text-center mt-3">
         <small class="text-muted">
-          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | v0.7.{{ versionData.build }}
+          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | v1.1.{{ versionData.build }}
         </small>
       </div>
     </div>
