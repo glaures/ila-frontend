@@ -7,6 +7,9 @@ interface Course {
   id: number
   name: string
   category: string
+  room: string
+  instructor: string
+  pause: boolean
   preferenceIndex?: number
 }
 
@@ -48,7 +51,7 @@ onMounted(loadOverview)
 
 <template>
   <div class="container py-4">
-    <h1 class="h3 mb-3">Meine Kurs-Präferenzen</h1>
+    <h1 class="h3 mb-3">Meine Kurse</h1>
 
     <div v-if="errorMsg" class="alert alert-danger">{{ errorMsg }}</div>
     <div v-if="loading" class="text-center">
@@ -56,7 +59,7 @@ onMounted(loadOverview)
     </div>
 
     <div class="row g-3" v-else>
-      <div v-for="b in overview" :key="b.blockId" class="col-12 col-md-6 col-lg-4">
+      <div v-for="b in overview" :key="b.blockId" class="col-12 col-md-6 col-lg-6">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
@@ -73,8 +76,8 @@ onMounted(loadOverview)
 
           <div class="card-body">
             <template v-if="b.status === 'ASSIGNED'">
-              <div class="fw-semibold">Vergebener Kurs:</div>
-              <div>{{ b.assignedCourse?.name }}</div>
+              <div class="fw-semibold">{{ b.assignedCourse?.name }}</div>
+              <div>{{ b.assignedCourse?.instructor }}, {{ b.assignedCourse?.room }}</div>
             </template>
 
             <template v-else-if="b.status === 'OPEN'">

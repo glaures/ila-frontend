@@ -6,9 +6,14 @@ const router = useRouter()
 
 onMounted(async () => {
   const {$authFetch} = useNuxtApp()
-  const blocks = await $authFetch('/blocks')
-  const firstBlockId = blocks[0].id
-  router.replace(`/preferences/${firstBlockId}`)
+  const period = await $authFetch('/periods/current')
+  if (period.closed)
+    router.replace(`/assignments/my-assignments`)
+  else {
+    const blocks = await $authFetch('/blocks')
+    const firstBlockId = blocks[0].id
+    router.replace(`/preferences/${firstBlockId}`)
+  }
 })
 </script>
 
