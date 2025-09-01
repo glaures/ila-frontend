@@ -1,6 +1,6 @@
 <template>
   <div class="p-4">
-    <h1 class="h4 mb-4">Kursvergabe starten</h1>
+    <h1 class="h1 mb-4">Kursvergabe starten</h1>
 
     <div v-if="loading" class="text-muted">Lade aktuelle Phase...</div>
 

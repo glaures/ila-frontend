@@ -1,3 +1,7 @@
+<script setup lang="ts">
+
+</script>
+
 <template>
   <div>
     <h1 class="mb-4">Administration</h1>
@@ -18,3 +22,7 @@ definePageMeta({
   layout: 'admin'
 })
 </script>
+
+<style scoped>
+
+</style>

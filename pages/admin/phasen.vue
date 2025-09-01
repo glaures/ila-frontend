@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3>Phasen verwalten</h3>
+    <h1>Phasen verwalten</h1>
 
     <div v-if="pending" class="alert alert-info">Lade Phasen...</div>
     <div v-else-if="error" class="alert alert-danger">Fehler beim Laden: {{ error.message }}</div>
@@ -78,6 +78,10 @@
 <script setup>
 import { ref } from 'vue'
 import DateInput from '~/components/DateInput.vue'
+
+definePageMeta({
+  layout: 'admin'
+})
 
 const { data, pending, error, refresh } = await useFetch('http://localhost:8080/periods', {
   key: 'phasen-fetch',

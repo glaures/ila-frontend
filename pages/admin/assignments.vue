@@ -1,8 +1,8 @@
 <template>
-  <div class="container py-4">
+  <div>
+    <h1>Kursbelegungen – Übersicht &amp; Druck</h1>
     <!-- Header / Controls (screen only) -->
     <div class="d-flex align-items-center justify-content-between mb-3 d-print-none">
-      <h1 class="h3 m-0">Kursbelegungen – Übersicht &amp; Druck</h1>
       <div class="btn-group">
         <button class="btn btn-outline-secondary" @click="reloadAll" :disabled="loading">
           <span v-if="!loading">Neu laden</span>
@@ -27,7 +27,8 @@
           </div>
           <div class="col-12 col-md-6" v-if="selectedDay">
             <div class="text-muted small">
-              Es werden alle Blöcke am {{ formatDay(selectedDay) }} geladen. Für jeden Block werden die angebotenen Kurse und deren Teilnehmer angezeigt.
+              Es werden alle Blöcke am {{ formatDay(selectedDay) }} geladen. Für jeden Block werden die angebotenen
+              Kurse und deren Teilnehmer angezeigt.
             </div>
           </div>
         </div>
@@ -84,7 +85,9 @@
                     <li v-for="a in (assignmentsByCourse[course.id] || [])" :key="a.userUserName" class="small">
                       {{ a.lastName }}, {{ a.firstName }}
                     </li>
-                    <li v-if="(assignmentsByCourse[course.id] || []).length === 0" class="small text-muted">(Keine Zuordnungen)</li>
+                    <li v-if="(assignmentsByCourse[course.id] || []).length === 0" class="small text-muted">(Keine
+                      Zuordnungen)
+                    </li>
                   </ol>
                 </div>
               </div>
@@ -98,7 +101,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import {onMounted, ref, computed} from 'vue'
+
+definePageMeta({layout: 'admin', title: 'Kurszuweisungen'})
 
 // --- Types from backend DTOs ---
 interface BlockDto {
@@ -130,7 +135,7 @@ interface CourseUserAssignmentDto {
   lastName: string
 }
 
-const { $authFetch } = useNuxtApp() as any
+const {$authFetch} = useNuxtApp() as any
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -155,8 +160,8 @@ const formatDay = (d: string) => weekdayLabels[d] || d
 
 const weekdaysAvailable = computed(() => {
   const set = new Set(blocks.value.map(b => b.dayOfWeek))
-  const order = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY']
-  return Array.from(set).sort((a,b) => order.indexOf(a) - order.indexOf(b))
+  const order = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
+  return Array.from(set).sort((a, b) => order.indexOf(a) - order.indexOf(b))
 })
 
 const blocksForSelectedDaySorted = computed(() => {
@@ -234,8 +239,13 @@ function onDayChange() {
   if (selectedDay.value) loadCoursesAndAssignmentsForDay(selectedDay.value)
 }
 
-function printPage() { window.print() }
-async function reloadAll() { if (selectedDay.value) await loadCoursesAndAssignmentsForDay(selectedDay.value) }
+function printPage() {
+  window.print()
+}
+
+async function reloadAll() {
+  if (selectedDay.value) await loadCoursesAndAssignmentsForDay(selectedDay.value)
+}
 
 onMounted(loadBlocks)
 </script>
@@ -243,14 +253,42 @@ onMounted(loadBlocks)
 <style scoped>
 /***** Print helpers *****/
 @media print {
-  .d-print-none { display: none !important; }
-  .container { max-width: 100% !important; width: 100% !important; }
+  .d-print-none {
+    display: none !important;
+  }
 
-  .row { display: block !important; margin: 0 !important; }
-  [class*="col-"] { display: block !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
-  .course-print-page { page-break-before: always; page-break-inside: avoid; break-inside: avoid; border: 1px solid #000 !important; box-shadow: none !important; min-height: 95vh; }
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
 
-  .card-body { display: block !important; }
-  .h-100 { height: auto !important; }
+  .row {
+    display: block !important;
+    margin: 0 !important;
+  }
+
+  [class*="col-"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .course-print-page {
+    page-break-before: always;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    min-height: 95vh;
+  }
+
+  .card-body {
+    display: block !important;
+  }
+
+  .h-100 {
+    height: auto !important;
+  }
 }
 </style>
