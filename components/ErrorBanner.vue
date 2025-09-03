@@ -1,8 +1,10 @@
 <!-- components/ErrorBanner.vue -->
 <template>
-  <div v-if="visible" class="alert alert-danger m-3 shadow" style="z-index: 9999" role="alert">
-    {{ errorMessage }}
-    <button type="button" class="btn-close float-end" @click="hide"></button>
+  <div class="position-fixed container" style="bottom: 5%;">
+    <div v-if="visible" class="alert alert-danger m-3 shadow" style="z-index: 9999" role="alert">
+      {{ errorMessage }}
+      <button type="button" class="btn-close float-end" @click="hide"></button>
+    </div>
   </div>
 </template>
 
