@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNuxtApp } from '#app'
 import { useErrorStore } from '~/stores/error'
+import { usePeriodContextStore } from '~/stores/periodContext'
 import { weekdayLabels } from '~/utils/weekdays'
 
 type BlockDto = {
@@ -15,8 +16,8 @@ type BlockDto = {
 }
 
 type CourseDto = {
-  id?: number
-  courseId: string
+  id?: number            // serververgeben (nicht editierbar)
+  courseId: string       // vom Nutzer vergeben (mandatory)
   name: string
   description?: string
   courseCategories: string[]
@@ -25,7 +26,7 @@ type CourseDto = {
   instructor?: string
   block?: BlockDto | null
   minAttendees: number
-  grades: number[]          // Set<Integer> im Backend
+  grades: number[]
   placeholder: boolean
 }
 
@@ -38,13 +39,17 @@ const router = useRouter()
 const { $authFetch } = useNuxtApp() as any
 const errorStore = useErrorStore()
 
+// --- Perioden-Kontext (einfach gehalten) ---
+const periodStore = usePeriodContextStore()
+const periodId = computed(() => periodStore.selectedId) // <— direkt aus dem Store
+
+// --- Daten ---
 const courses = ref<CourseDto[]>([])
 const blocks  = ref<BlockDto[]>([])
-
 const selectedCourse = ref<CourseDto | null>(null)
 const selectedBlockId = ref<number | null>(null)
 
-// Typeahead
+// --- Typeahead ---
 const search = ref('')
 const typeaheadOpen = ref(false)
 const filteredCourses = computed(() => {
@@ -58,7 +63,7 @@ const filteredCourses = computed(() => {
   ).slice(0, 50)
 })
 
-// Formularmodell
+// --- Formular ---
 const form = ref<Partial<CourseDto>>({
   courseId: '',
   name: '',
@@ -73,21 +78,12 @@ const form = ref<Partial<CourseDto>>({
   placeholder: false
 })
 
-async function loadCourses() {
-  try {
-    courses.value = await $authFetch('/courses')
-  } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
-  }
-}
-async function loadBlocks() {
-  try {
-    blocks.value = await $authFetch('/blocks')
-  } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
-  }
-}
+// --- Abgeleitet: nur Blöcke der aktuellen Phase ---
+const blocksForCurrentPeriod = computed(() =>
+    blocks.value.filter(b => periodId.value != null && b.periodId === periodId.value)
+)
 
+// --- Helper ---
 function blockLabel(b: BlockDto) {
   const day = weekdayLabels[b.dayOfWeek] ?? b.dayOfWeek
   return `${day} ${b.startTime}–${b.endTime}`
@@ -97,12 +93,26 @@ function blockShortLabel(b?: BlockDto | null) {
   const day = weekdayLabels[b.dayOfWeek] ?? b.dayOfWeek
   return `${day} ${b.startTime}–${b.endTime}`
 }
-
 function displayCourse(c: CourseDto) {
   const id = c.courseId ? `[${c.courseId}] ` : ''
   return `${id}${c.name ?? ''}`
 }
 
+// --- Laden ---
+async function loadBlocks() {
+  try { blocks.value = await $authFetch('/blocks') }
+  catch (err: any) { errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err) }
+}
+async function loadCoursesForPeriod() {
+  try {
+    if (periodId.value == null) { courses.value = []; return }
+    courses.value = await $authFetch(`/courses?period-id=${periodId.value}`)
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
+  }
+}
+
+// --- Auswahl ---
 function selectCourse(c: CourseDto) {
   selectedCourse.value = { ...c }
   form.value = {
@@ -124,7 +134,6 @@ function selectCourse(c: CourseDto) {
   typeaheadOpen.value = false
   router.replace({ path: route.path, query: { id: String(c.id ?? '') } })
 }
-
 function newCourse() {
   selectedCourse.value = null
   selectedBlockId.value = null
@@ -146,93 +155,78 @@ function newCourse() {
   router.replace({ path: route.path, query: {} })
 }
 
+// --- Validierung & Persistenz ---
 function validateForm(): string[] {
   const errors: string[] = []
   if (!form.value.courseId?.trim()) errors.push('courseId ist Pflicht.')
   if (!form.value.name?.trim()) errors.push('name ist Pflicht.')
-  if (form.value.maxAttendees === undefined || form.value.maxAttendees === null) {
-    errors.push('maxAttendees ist Pflicht.')
-  } else if (Number(form.value.maxAttendees) < 1) {
-    errors.push('maxAttendees muss ≥ 1 sein.')
-  }
-  if (!form.value.courseCategories || form.value.courseCategories.length === 0) {
-    errors.push('Mindestens eine Kurskategorie wählen.')
-  }
-  // Plausibilitätscheck min ≤ max (falls gesetzt)
+  if (form.value.maxAttendees == null) errors.push('maxAttendees ist Pflicht.')
+  else if (Number(form.value.maxAttendees) < 1) errors.push('maxAttendees muss ≥ 1 sein.')
+  if (!form.value.courseCategories || form.value.courseCategories.length === 0) errors.push('Mindestens eine Kurskategorie wählen.')
   if (form.value.minAttendees != null && form.value.maxAttendees != null) {
-    if (Number(form.value.minAttendees) > Number(form.value.maxAttendees)) {
-      errors.push('minAttendees darf nicht größer als maxAttendees sein.')
-    }
+    if (Number(form.value.minAttendees) > Number(form.value.maxAttendees)) errors.push('minAttendees darf nicht größer als maxAttendees sein.')
   }
+  if (periodId.value == null) errors.push('Bitte oben eine Phase auswählen.')
   return errors
 }
 
 async function saveCourse() {
   const errs = validateForm()
   if (errs.length) { errorStore.show(err.join(' ')); return }
+  try {
+    const gradesSortedUnique = Array.from(new Set(form.value.grades ?? [])).sort((a,b)=>a-b)
+    const payload: any = {
+      courseId: form.value.courseId!.trim(),
+      name: form.value.name!.trim(),
+      description: form.value.description?.trim() || '',
+      courseCategories: [...(form.value.courseCategories as string[])],
+      maxAttendees: Number(form.value.maxAttendees),
+      room: form.value.room?.trim() || '',
+      instructor: form.value.instructor?.trim() || '',
+      blockId: (selectedBlockId.value !== null ? selectedBlockId.value : null),
+      minAttendees: Number(form.value.minAttendees ?? 0),
+      grades: gradesSortedUnique,
+      placeholder: !!form.value.placeholder
+    }
 
-  const gradesSortedUnique = Array.from(new Set(form.value.grades ?? [])).sort((a,b)=>a-b)
+    let saved: CourseDto
+    if (form.value.id != null) {
+      const urlId = Number(form.value.id)
+      saved = await $authFetch(`/courses/${urlId}`, { method: 'PUT', body: payload })
+    } else {
+      payload.periodId = periodId.value // <— NEU: beim Anlegen mitsenden
+      saved = await $authFetch('/courses', { method: 'POST', body: payload })
+    }
 
-  const payload: any = {
-    courseId: form.value.courseId!.trim(),
-    name: form.value.name!.trim(),
-    description: form.value.description?.trim() || '',
-    courseCategories: [...(form.value.courseCategories as string[])],
-    maxAttendees: Number(form.value.maxAttendees),
-    room: form.value.room?.trim() || '',
-    instructor: form.value.instructor?.trim() || '',
-    blockId: (selectedBlockId.value !== null ? selectedBlockId.value : null),
-    minAttendees: Number(form.value.minAttendees ?? 0),
-    grades: gradesSortedUnique,
-    placeholder: !!form.value.placeholder
+    await loadCoursesForPeriod()
+    const after = courses.value.find(x => (saved.id && x.id === saved.id) || x.courseId === saved.courseId) ?? saved
+    selectCourse(after)
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
   }
-
-  let saved: CourseDto
-  if (form.value.id != null) {
-    // id NUR im Pfad verwenden, NICHT im Body mitsenden
-    const urlId = Number(form.value.id)
-    saved = await $authFetch(`/courses/${urlId}`, { method: 'PUT', body: payload })
-  } else {
-    saved = await $authFetch('/courses', { method: 'POST', body: payload })
-  }
-
-  await loadCourses()
-  const after = courses.value.find(x => (saved.id && x.id === saved.id) || x.courseId === saved.courseId) ?? saved
-  selectCourse(after)
 }
 
+// --- Löschen inkl. Sicherheitsabfrage ---
 async function fetchAssignmentCountForCourseId(courseIdNum: number): Promise<number> {
-  // Holt die Anzahl zugewiesener Schüler:innen für diesen Kurs.
-  // Robust gegen verschiedene Response-Formate: number | {count} | array
   try {
     const resp: any = await $authFetch(`/assignments?course-id=${courseIdNum}`)
-
     if (typeof resp === 'number') return resp
     if (Array.isArray(resp)) return resp.length
     if (resp && typeof resp === 'object') {
       const v = resp.count ?? resp.total ?? resp.size
       if (typeof v === 'number') return v
     }
-
-    // Fallback: unbekanntes Format → konservativ NICHT löschen
     throw new Error('Unerwartetes Antwortformat von /assignments')
   } catch (err: any) {
-    // Fehler anzeigen und nach oben reichen, damit kein versehentliches Löschen passiert
     errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Zuordnungsanzahl: ' + err)
     throw err
   }
 }
-
 async function deleteCourse() {
-  if (form.value.id == null) {
-    errorStore.show('Kein Kurs ausgewählt oder Kurs hat keine Server-ID.')
-    return
-  }
+  if (form.value.id == null) { errorStore.show('Kein Kurs ausgewählt oder Kurs hat keine Server-ID.'); return }
   const idNum = Number(form.value.id)
-
   try {
     const count = await fetchAssignmentCountForCourseId(idNum)
-
     if (count > 0) {
       const ok = window.confirm(
           `Es sind aktuell ${count} Schülerinnen diesem Kurs zugewiesen. ` +
@@ -241,46 +235,40 @@ async function deleteCourse() {
       )
       if (!ok) return
     }
-
     await $authFetch(`/courses/${idNum}`, { method: 'DELETE' })
-    await loadCourses()
-    newCourse() // Formular zurücksetzen
-  } catch {
-    // Fehler wurden bereits im fetch/DELETE-Call gemeldet
-  }
+    await loadCoursesForPeriod()
+    newCourse()
+  } catch { /* Fehler bereits gemeldet */ }
 }
 
-// Preselect via ?courseId= oder :courseId / :id
+// --- Deep-Link-Preselect (einfach): bevorzugt ?id=<serverId>
 function tryPreselectFromRoute() {
-  // bevorzugt: /admin/kurse?id=123  (oder /admin/kurse/123, falls Route so existiert)
-  const idFromQuery = typeof route.query.id === 'string' ? route.query.id : ''
-  const idFromParam = typeof route.params.id === 'string' ? route.params.id : ''
-  const idStr = idFromQuery || idFromParam
-
-  if (idStr) {
-    const idNum = Number(idStr)
-    const byId = courses.value.find(c => c.id === idNum)
-    if (byId) { selectCourse(byId); return }
-  }
-
-  // Fallback: historisch über courseId (z.B. ?courseId=ABC1)
-  const cid = typeof route.query.courseId === 'string' ? route.query.courseId
-      : (typeof route.params.courseId === 'string' ? route.params.courseId : '')
-  if (cid) {
-    const byCourseId = courses.value.find(c => c.courseId === cid)
-    if (byCourseId) selectCourse(byCourseId)
-  }
+  const idStr = typeof route.query.id === 'string' ? route.query.id
+      : (typeof route.params.id === 'string' ? route.params.id : '')
+  if (!idStr) return
+  const idNum = Number(idStr)
+  const byId = courses.value.find(c => c.id === idNum)
+  if (byId) selectCourse(byId)
 }
 
+// --- Lifecycle ---
 onMounted(async () => {
-  await Promise.all([loadCourses(), loadBlocks()])
+  // Periode sicher initialisieren (einfach & explizit)
+  if (!periodStore.initialized) {
+    await periodStore.loadPeriods($authFetch)
+  }
+  await loadBlocks()
+  await loadCoursesForPeriod()
   tryPreselectFromRoute()
 })
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') typeaheadOpen.value = false
-}
+// Bei Wechsel der Phase: Kurse neu laden & Formular leeren
+watch(() => periodStore.selectedId, async () => {
+  await loadCoursesForPeriod()
+  newCourse()
+})
 
+function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape') typeaheadOpen.value = false }
 function onBlockChange(ev: Event) {
   const val = (ev.target as HTMLSelectElement).value
   selectedBlockId.value = val ? Number(val) : null
@@ -296,6 +284,10 @@ function onBlockChange(ev: Event) {
         <button class="btn btn-outline-danger me-2" :disabled="!form.id" @click="deleteCourse">Löschen</button>
         <button class="btn btn-primary" @click="saveCourse">Speichern</button>
       </div>
+    </div>
+
+    <div v-if="periodId == null" class="alert alert-info">
+      Bitte oben eine Phase auswählen. Es werden erst dann Kurse geladen.
     </div>
 
     <!-- Typeahead Search -->
@@ -377,12 +369,12 @@ function onBlockChange(ev: Event) {
             <input v-model="form.room" class="form-control" type="text" />
           </div>
 
-          <!-- Block-Auswahl -->
+          <!-- Block-Auswahl (nur Blöcke der aktuellen Phase) -->
           <div class="col-12 col-md-3">
             <label class="form-label">Block (optional)</label>
             <select class="form-select" :value="selectedBlockId ?? ''" @change="onBlockChange">
               <option value="">— kein Block zugewiesen —</option>
-              <option v-for="b in blocks" :key="b.id" :value="b.id">
+              <option v-for="b in blocksForCurrentPeriod" :key="b.id" :value="b.id">
                 {{ blockLabel(b) }}
               </option>
             </select>

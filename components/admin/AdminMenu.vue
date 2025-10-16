@@ -22,8 +22,8 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const items = [
-  { to: '/admin/overview', label: 'Dashboard',  icon: 'bi bi-house-door' },
   { to: '/admin/phasen', label: 'Phasen',  icon: 'bi bi-calendar3' },
+  { to: '/admin/bloecke', label: 'Blöcke',  icon: 'bi bi-clock-history' },
   { to: '/admin/kurse', label: 'Kurse',  icon: 'bi bi-chat-left-text' },
   { to: '/admin/users', label: 'Schüler', icon: 'bi bi-person-lines-fill' },
   { to: '/admin/problems', label: 'Probleme', icon: 'bi bi-exclamation-diamond' },

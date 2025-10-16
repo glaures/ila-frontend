@@ -68,8 +68,6 @@ const result = ref(null)
 async function fetchCurrentPeriod() {
   try {
     currentPeriod.value = await $authFetch('/periods/current')
-  } catch (err) {
-    console.error(err)
   } finally {
     loading.value = false
   }
@@ -84,8 +82,6 @@ async function startAssignment() {
       method: 'POST'
     })
     await navigateTo('/admin/assignments')
-  } catch (err) {
-    result.value = 'Fehler: ' + err.message
   } finally {
     assigning.value = false
   }

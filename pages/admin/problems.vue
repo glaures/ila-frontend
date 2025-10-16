@@ -13,7 +13,6 @@ definePageMeta({
 
 const problems = ref<Problem[]>([])
 const loading = ref(true)
-const errorMsg = ref<string | null>(null)
 
 const typeLabel: Record<string, string> = {
   notEnoughCourses: 'nicht genügend Kurse',
@@ -32,13 +31,10 @@ const hasProblems = computed(() => problems.value.length > 0)
 
 async function loadProblems() {
   loading.value = true
-  errorMsg.value = null
   try {
     const data = await $authFetch('/problems')
     // Absicherung gegen „komische“ Antworten
     problems.value = Array.isArray(data) ? data as Problem[] : []
-  } catch (e: any) {
-    errorMsg.value = e?.message ?? 'Unbekannter Fehler beim Laden'
   } finally {
     loading.value = false
   }
@@ -57,16 +53,12 @@ onMounted(loadProblems)
       </button>
     </div>
 
-    <div v-if="errorMsg" class="alert alert-danger" role="alert">
-      {{ errorMsg }}
-    </div>
-
-    <div v-if="loading && !errorMsg" class="text-center py-5">
+    <div v-if="loading" class="text-center py-5">
       <div class="spinner-border" role="status" aria-hidden="true"></div>
       <div class="mt-2">Lade Probleme …</div>
     </div>
 
-    <div v-else-if="!hasProblems && !errorMsg" class="alert alert-success" role="alert">
+    <div v-else-if="!hasProblems" class="alert alert-success" role="alert">
       Aktuell sind keine Probleme vorhanden.
     </div>
 

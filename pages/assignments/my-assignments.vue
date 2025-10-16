@@ -39,8 +39,6 @@ async function loadOverview() {
   try {
     const data = await $authFetch('/preferences/overview')
     overview.value = data
-  } catch (e: any) {
-    errorMsg.value = e.message || 'Fehler beim Laden'
   } finally {
     loading.value = false
   }
