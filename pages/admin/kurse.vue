@@ -3,6 +3,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNuxtApp } from '#app'
 import { useErrorStore } from '~/stores/error'
+import { useToastStore } from '~/stores/toast'
 import { usePeriodContextStore } from '~/stores/periodContext'
 import { weekdayLabels } from '~/utils/weekdays'
 
@@ -28,16 +29,21 @@ type CourseDto = {
   minAttendees: number
   grades: number[]
   placeholder: boolean
+  excludedGenders?: string[]
+  manualAssignmentOnly?: boolean
 }
 
 const ALL_CATEGORIES = ['iLa', 'KuP', 'BuE', 'FuF'] as const
 const GRADES_OPTIONS = [5,6,7,8,9,10,11,12]
+const GENDER_OPTIONS = ['male', 'female', 'diverse'] as const
 
 definePageMeta({ layout: 'admin' })
 const route = useRoute()
 const router = useRouter()
 const { $authFetch } = useNuxtApp() as any
 const errorStore = useErrorStore()
+const toastStore = useToastStore()
+const periodContextStore = usePeriodContextStore()
 
 // --- Perioden-Kontext (einfach gehalten) ---
 const periodStore = usePeriodContextStore()
@@ -48,6 +54,10 @@ const courses = ref<CourseDto[]>([])
 const blocks  = ref<BlockDto[]>([])
 const selectedCourse = ref<CourseDto | null>(null)
 const selectedBlockId = ref<number | null>(null)
+
+// --- Modal für Löschbestätigung ---
+const showDeleteModal = ref(false)
+const assignmentCount = ref(0)
 
 // --- Typeahead ---
 const search = ref('')
@@ -75,7 +85,9 @@ const form = ref<Partial<CourseDto>>({
   block: null,
   minAttendees: 0,
   grades: [],
-  placeholder: false
+  placeholder: false,
+  excludedGenders: [],
+  manualAssignmentOnly: false
 })
 
 // --- Abgeleitet: nur Blöcke der aktuellen Phase ---
@@ -98,11 +110,17 @@ function displayCourse(c: CourseDto) {
   return `${id}${c.name ?? ''}`
 }
 
+watchEffect(async () => {
+  if(periodContextStore.selectedPeriod)
+    await loadBlocks()
+})
+
 // --- Laden ---
 async function loadBlocks() {
-  try { blocks.value = await $authFetch('/blocks') }
-  catch (err: any) { errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err) }
+  try { blocks.value = await $authFetch(`/blocks?period-id=${periodContextStore.selectedPeriod?.id}`) }
+  catch (err: any) { errorStore.show(err?.data?.message ?? 'Die Blöcke konnten nicht geladen werden: ' + err) }
 }
+
 async function loadCoursesForPeriod() {
   try {
     if (periodId.value == null) { courses.value = []; return }
@@ -127,7 +145,9 @@ function selectCourse(c: CourseDto) {
     block: c.block ?? null,
     minAttendees: typeof c.minAttendees === 'number' ? c.minAttendees : 0,
     grades: Array.isArray(c.grades) ? [...c.grades].sort((a,b)=>a-b) : [],
-    placeholder: !!c.placeholder
+    placeholder: !!c.placeholder,
+    excludedGenders: Array.isArray(c.excludedGenders) ? [...c.excludedGenders] : [],
+    manualAssignmentOnly: !!c.manualAssignmentOnly
   }
   selectedBlockId.value = c.block?.id ?? null
   search.value = displayCourse(c)
@@ -148,11 +168,18 @@ function newCourse() {
     block: null,
     minAttendees: 0,
     grades: [],
-    placeholder: false
+    placeholder: false,
+    excludedGenders: [],
+    manualAssignmentOnly: false
   }
   search.value = ''
   typeaheadOpen.value = false
   router.replace({ path: route.path, query: {} })
+}
+
+function manageCourseParticipants() {
+  if (!form.value.id) return
+  router.push(`/admin/kurs/${form.value.id}`)
 }
 
 // --- Validierung & Persistenz ---
@@ -172,9 +199,10 @@ function validateForm(): string[] {
 
 async function saveCourse() {
   const errs = validateForm()
-  if (errs.length) { errorStore.show(err.join(' ')); return }
+  if (errs.length) { errorStore.show(errs.join(' ')); return }
   try {
     const gradesSortedUnique = Array.from(new Set(form.value.grades ?? [])).sort((a,b)=>a-b)
+    const isNewCourse = form.value.id == null
     const payload: any = {
       courseId: form.value.courseId!.trim(),
       name: form.value.name!.trim(),
@@ -186,16 +214,20 @@ async function saveCourse() {
       blockId: (selectedBlockId.value !== null ? selectedBlockId.value : null),
       minAttendees: Number(form.value.minAttendees ?? 0),
       grades: gradesSortedUnique,
-      placeholder: !!form.value.placeholder
+      placeholder: !!form.value.placeholder,
+      excludedGenders: [...(form.value.excludedGenders ?? [])],
+      manualAssignmentOnly: !!form.value.manualAssignmentOnly
     }
 
     let saved: CourseDto
-    if (form.value.id != null) {
+    if (!isNewCourse) {
       const urlId = Number(form.value.id)
       saved = await $authFetch(`/courses/${urlId}`, { method: 'PUT', body: payload })
+      toastStore.success(`Kurs "${saved.name}" wurde erfolgreich aktualisiert.`)
     } else {
       payload.periodId = periodId.value // <— NEU: beim Anlegen mitsenden
       saved = await $authFetch('/courses', { method: 'POST', body: payload })
+      toastStore.success(`Kurs "${saved.name}" wurde erfolgreich angelegt.`)
     }
 
     await loadCoursesForPeriod()
@@ -223,22 +255,34 @@ async function fetchAssignmentCountForCourseId(courseIdNum: number): Promise<num
   }
 }
 async function deleteCourse() {
-  if (form.value.id == null) { errorStore.show('Kein Kurs ausgewählt oder Kurs hat keine Server-ID.'); return }
+  if (form.value.id == null) {
+    errorStore.show('Kein Kurs ausgewählt oder Kurs hat keine Server-ID.')
+    return
+  }
   const idNum = Number(form.value.id)
   try {
-    const count = await fetchAssignmentCountForCourseId(idNum)
-    if (count > 0) {
-      const ok = window.confirm(
-          `Es sind aktuell ${count} Schülerinnen diesem Kurs zugewiesen. ` +
-          `Bist Du sicher, dass Du diesen Kurs löschen möchtest? ` +
-          `Es gehen alle Zuweisungen dadurch verloren.`
-      )
-      if (!ok) return
-    }
+    assignmentCount.value = await fetchAssignmentCountForCourseId(idNum)
+    showDeleteModal.value = true
+  } catch { /* Fehler bereits gemeldet */ }
+}
+
+async function confirmDelete() {
+  if (form.value.id == null) return
+  const idNum = Number(form.value.id)
+  const courseName = form.value.name || 'Kurs'
+  try {
     await $authFetch(`/courses/${idNum}`, { method: 'DELETE' })
     await loadCoursesForPeriod()
+    showDeleteModal.value = false
+    toastStore.success(`Kurs "${courseName}" wurde erfolgreich gelöscht.`)
     newCourse()
-  } catch { /* Fehler bereits gemeldet */ }
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Löschen: ' + err)
+  }
+}
+
+function cancelDelete() {
+  showDeleteModal.value = false
 }
 
 // --- Deep-Link-Preselect (einfach): bevorzugt ?id=<serverId>
@@ -268,7 +312,15 @@ watch(() => periodStore.selectedId, async () => {
   newCourse()
 })
 
-function onKeydown(e: KeyboardEvent) { if (e.key === 'Escape') typeaheadOpen.value = false }
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    if (showDeleteModal.value) {
+      showDeleteModal.value = false
+    } else {
+      typeaheadOpen.value = false
+    }
+  }
+}
 function onBlockChange(ev: Event) {
   const val = (ev.target as HTMLSelectElement).value
   selectedBlockId.value = val ? Number(val) : null
@@ -282,6 +334,10 @@ function onBlockChange(ev: Event) {
       <div>
         <button class="btn btn-outline-secondary me-2" @click="newCourse">Neuer Kurs</button>
         <button class="btn btn-outline-danger me-2" :disabled="!form.id" @click="deleteCourse">Löschen</button>
+        <button class="btn btn-outline-primary me-2" :disabled="!form.id" @click="manageCourseParticipants">
+          <i class="bi bi-people me-1"></i>
+          Teilnehmer verwalten
+        </button>
         <button class="btn btn-primary" @click="saveCourse">Speichern</button>
       </div>
     </div>
@@ -371,7 +427,7 @@ function onBlockChange(ev: Event) {
 
           <!-- Block-Auswahl (nur Blöcke der aktuellen Phase) -->
           <div class="col-12 col-md-3">
-            <label class="form-label">Block (optional)</label>
+            <label class="form-label">Block</label>
             <select class="form-select" :value="selectedBlockId ?? ''" @change="onBlockChange">
               <option value="">— kein Block zugewiesen —</option>
               <option v-for="b in blocksForCurrentPeriod" :key="b.id" :value="b.id">
@@ -415,6 +471,35 @@ function onBlockChange(ev: Event) {
             <div class="form-text">Mehrfachauswahl möglich (5–12).</div>
           </div>
 
+          <!-- Ausgeschlossene Geschlechter -->
+          <div class="col-12">
+            <label class="form-label d-block">Ausgeschlossene Geschlechter</label>
+            <div class="d-flex flex-wrap gap-3">
+              <div v-for="gender in GENDER_OPTIONS" :key="gender" class="form-check">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    :id="'gender-' + gender"
+                    :value="gender"
+                    v-model="form.excludedGenders"
+                />
+                <label class="form-check-label" :for="'gender-' + gender">
+                  {{ gender === 'male' ? 'Männlich' : gender === 'female' ? 'Weiblich' : 'Divers' }}
+                </label>
+              </div>
+            </div>
+            <div class="form-text">Wähle Geschlechter aus, die von diesem Kurs ausgeschlossen werden sollen.</div>
+          </div>
+
+          <!-- Nur manuelle Zuweisung -->
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="manualAssignmentOnly" v-model="form.manualAssignmentOnly" />
+              <label class="form-check-label" for="manualAssignmentOnly">Nur manuelle Zuweisung (von Präferenzverfahren ausschließen)</label>
+            </div>
+            <div class="form-text ms-4">Wenn aktiviert, können Schüler*innen diesen Kurs nicht im Präferenzverfahren wählen und er muss manuell zugewiesen werden.</div>
+          </div>
+
           <!-- Platzhalter -->
           <div class="col-12">
             <div class="form-check">
@@ -427,6 +512,38 @@ function onBlockChange(ev: Event) {
     </div>
 
     <div class="py-3"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Kurs wirklich löschen?</h5>
+            <button type="button" class="btn-close" @click="cancelDelete" aria-label="Schließen"></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="assignmentCount > 0" class="alert alert-warning mb-3">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <strong>Achtung:</strong> Es sind aktuell <strong>{{ assignmentCount }}</strong> Schüler*innen diesem Kurs zugewiesen.
+            </div>
+            <p>
+              Bist Du sicher, dass Du den Kurs
+              <strong>{{ form.courseId ? `[${form.courseId}] ` : '' }}{{ form.name }}</strong>
+              löschen möchtest?
+            </p>
+            <p v-if="assignmentCount > 0" class="text-danger mb-0">
+              Alle Zuweisungen gehen dadurch verloren!
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="cancelDelete">Abbrechen</button>
+            <button type="button" class="btn btn-danger" @click="confirmDelete">
+              Kurs löschen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 

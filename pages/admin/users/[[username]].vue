@@ -39,7 +39,14 @@
         </thead>
         <tbody>
         <tr v-for="assignment in assignments" :key="assignment.id">
-          <td>{{ assignment.course.courseId}}:&nbsp;{{ assignment.course.name }}</td>
+          <td>
+            <div class="p-2">
+              <div class="text-muted">{{ assignment.course.block.dayOfWeek }},
+                {{ assignment.course.block.startTime }}-{{ assignment.course.block.endTime }}
+              </div>
+              <div class="mt-1">{{ assignment.course.courseId }}:&nbsp;{{ assignment.course.name }}</div>
+            </div>
+          </td>
           <td>
             <button class="btn btn-danger btn-sm" @click="removeAssignment(assignment.id)">Entfernen</button>
           </td>
@@ -63,11 +70,12 @@
               :key="course.courseId"
               @click="selectCourse(course)"
           >
-            {{ course.name }} ({{ course.courseId }})
+            <div class="text-muted small">{{course.block?.dayOfWeek}}&nbsp;{{ course.block.startTime }}-{{ course.block.endTime }}</div>
+            <div>[{{ course.courseId }}] {{ course.name }}</div>
           </li>
         </ul>
         <div v-if="selectedCourse" class="mt-2">
-          {{selectedCourse.courseId}}:&nbsp;{{selectedCourse.name}}
+          {{ selectedCourse.courseId }}:&nbsp;{{ selectedCourse.name }}
           <button class="btn btn-primary" @click="assignCourse">Zuweisen</button>
         </div>
       </div>
@@ -76,14 +84,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import {ref, onMounted, computed} from 'vue'
+import {weekdayLabels} from "~/utils/weekdays.js";
 
 definePageMeta({
   layout: 'admin'
 })
 
 const route = useRoute()
-const { $authFetch } = useNuxtApp()
+const {$authFetch} = useNuxtApp()
+const periodContextStore = usePeriodContextStore()
 
 const students = ref([])
 const courses = ref([])
@@ -96,7 +106,7 @@ const courseSearch = ref('')
 const filteredCourses = ref([])
 const selectedCourse = ref(null)
 
-const feedback = ref({ info: [], warning: [], error: [] })
+const feedback = ref({info: [], warning: [], error: []})
 
 const filteredStudents = computed(() => {
   const q = studentSearch.value
@@ -104,9 +114,24 @@ const filteredStudents = computed(() => {
   return students.value.filter(s => s.firstName?.includes(q) || s.lastName?.includes(q))
 })
 
+const enrichedCourses = computed(() => {
+  return courses.value.map(c => ({
+    ...c,
+    block: {
+      ...c.block,
+      dayOfWeek: weekdayLabels[c.block.dayOfWeek]
+    }
+  }))
+})
+
+watchEffect(async () => {
+  if(periodContextStore.selectedPeriod)
+    courses.value = await $authFetch(`/courses?period-id=${periodContextStore.selectedPeriod.id}`)
+})
+
 onMounted(async () => {
   students.value = await $authFetch('/users')
-  courses.value = await $authFetch('/courses')
+  courses.value = await $authFetch(`/courses?period-id=${periodContextStore.selectedPeriod.id}`)
   const param = route.params?.username
   if (param) {
     const userName = decodeURIComponent(param)
@@ -124,12 +149,22 @@ function selectStudent(student) {
 
 async function loadAssignments() {
   if (!selectedStudent.value) return
-  assignments.value = await $authFetch(`/assignments?user-name=${selectedStudent.value.userName}`)
+  assignments.value = (await $authFetch(`/assignments?user-name=${selectedStudent.value.userName}&period-id=${periodContextStore.selectedPeriod.id}`))
+      .map(assignment => ({
+        ...assignment,
+        course: {
+          ...assignment.course,
+          block: {
+            ...assignment.course.block,
+            dayOfWeek: weekdayLabels[assignment.course.block.dayOfWeek]
+          }
+        }
+      }))
 }
 
 function filterCourses() {
   const q = courseSearch.value.toLowerCase()
-  filteredCourses.value = courses.value.filter(
+  filteredCourses.value = enrichedCourses.value.filter(
       c => c.name.toLowerCase().includes(q) || c.courseId.toString().includes(q)
   )
 }
@@ -157,7 +192,7 @@ async function assignCourse() {
 
 async function removeAssignment(id) {
   console.log("deleting " + id)
-  const result = await $authFetch(`/assignments/${id}`, { method: 'DELETE' })
+  const result = await $authFetch(`/assignments/${id}`, {method: 'DELETE'})
   showFeedback(result)
   await loadAssignments()
 }

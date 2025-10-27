@@ -6,7 +6,7 @@ const toastStore = useToastStore()
 </script>
 
 <template>
-  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
     <TransitionGroup name="toast">
       <div
           v-for="toast in toastStore.toasts"

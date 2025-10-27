@@ -51,7 +51,7 @@
         <div v-if="coursesByBlock[block.id] && coursesByBlock[block.id].length" class="row g-3">
           <div v-for="course in coursesByBlock[block.id]" :key="course.id" class="col-12 col-md-6 col-lg-4">
             <!-- Each course becomes its own print page -->
-            <div class="card h-100 course-print-page">
+            <div class="card h-100 d-flex flex-column course-print-page">
               <!-- Print-only heading with day & time -->
               <div class="card-header d-none d-print-block bg-white border-0 pt-4">
                 <div class="mb-1 text-uppercase small text-muted">{{ formatDay(block.dayOfWeek) }}</div>
@@ -71,10 +71,11 @@
                   <div>Raum: <strong>{{ course.room || '—' }}</strong></div>
                   <div>Leitung: <strong>{{ displayInstructor(course) }}</strong></div>
                   <div>Max. TN: <strong>{{ course.maxAttendees }}</strong></div>
+                  <div>Klassen: <strong>{{ course.grades.join(',') }}</strong></div>
                 </div>
 
                 <!-- Attendees list -->
-                <div class="mt-auto">
+                <div>
                   <div class="d-flex justify-content-between align-items-center border-top pt-2 mb-1">
                     <span class="small text-muted">Teilnehmer</span>
                     <span class="badge bg-light text-dark">

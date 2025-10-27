@@ -1,128 +1,164 @@
 <template>
   <div class="container-fluid py-4">
-    <StatusCard :status="preferencesStatus"
-                v-if="preferencesStatus"/>
+    <StatusCard :status="preferencesStatus" v-if="preferencesStatus"/>
 
     <!-- Navigation -->
     <div class="mt-3 d-flex justify-content-between mb-3">
       <button
           class="btn btn-outline-secondary btn-sm"
-          :disabled="!hasPreviousBlock"
+          :disabled="!hasPreviousBlock || isSaving"
           @click="goToPreviousBlock"
+          aria-label="Zum vorherigen Block zurück"
       >
+        <span v-if="isSaving && navigationDirection === 'prev'" class="spinner-border spinner-border-sm me-1"></span>
         &larr; Zurück
       </button>
       <button
           class="btn btn-outline-secondary btn-sm"
-          :disabled="!hasNextBlock"
+          :disabled="!hasNextBlock || isSaving"
           @click="goToNextBlock"
+          aria-label="Zum nächsten Block weiter"
       >
+        <span v-if="isSaving && navigationDirection === 'next'" class="spinner-border spinner-border-sm me-1"></span>
         Weiter &rarr;
       </button>
     </div>
 
     <div class="h4 mt-3">{{ currentBlockLabel }}</div>
 
-    <!-- Hilfetext -->
-    <div class="text-info text-xs small">
-      Bringe die Kurse in die Reihenfolge, die Deiner Präferenz entspricht. Nutze die Pfeile oder Drag & Drop.
+    <!-- Bereits zugewiesener Kurs -->
+    <div v-if="alreadyAssignedCourse" class="alert alert-success mt-4" role="status">
+      <div class="d-flex align-items-start">
+        <i class="bi bi-check-circle-fill text-success fs-4 me-3 flex-shrink-0"></i>
+        <div class="flex-grow-1">
+          <h5 class="alert-heading mb-2">Zuweisung erfolgt</h5>
+          <p class="mb-1">
+            Du wurdest dem Kurs <strong>{{ alreadyAssignedCourse.name }}</strong> zugeteilt.
+          </p>
+          <div class="mt-2 d-flex flex-wrap gap-1">
+            <span
+                v-for="cat in alreadyAssignedCourse.courseCategories"
+                :key="cat"
+                class="badge"
+                :style="{ 
+                  backgroundColor: getCategoryInfo(cat).color, 
+                  color: getCategoryInfo(cat).textColor 
+                }"
+            >
+              {{ categoryLabelMap[cat as CategoryCode] || cat }}
+            </span>
+          </div>
+          <hr class="my-2">
+          <p class="small text-muted mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            Diese Zuweisung ist verbindlich und kann nicht mehr geändert werden.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <!-- Pause -->
-    <div class="mt-2 form-check form-switch mb-3" v-if="!alreadyAssignedCourse">
-      <input
-          class="form-check-input"
-          type="checkbox"
-          id="pauseToggle"
-          v-model="pauseSelected"
-      />
-      <label class="form-check-label" for="pauseToggle">
-        Mittagessen / Hofpause
-      </label>
-    </div>
+    <!-- Präferenzauswahl -->
+    <template v-else>
+      <!-- Hilfetext -->
+      <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-2"></i>
+        Sortiere die Kurse nach Deiner Präferenz. Der Algorithmus berücksichtigt deine Präferenzen 
+        über alle Blöcke hinweg bei der finalen Zuweisung. Nutze die Pfeile oder Drag & Drop.
+      </div>
 
-    <div v-else class="mt-4">
-      Du hast hier bereits den Kurs
-      <div class="h4 mt-2">{{ alreadyAssignedCourse.name }}</div>
-      belegt.
-    </div>
-
-    <div
-        class="alert alert-info"
-        v-if="pauseSelected"
-    >
-      Für diesen Block möchtest oder kannst Du keinen Kurs belegen.
-    </div>
-
-
-    <!-- Kursliste -->
-    <draggable
-        v-if="!pauseSelected"
-        v-model="preferences"
-        item-key="id"
-        class="list-group"
-        :disabled="pauseSelected"
-        handle=".drag-handle"
-        ghost-class="drag-ghost"
-        @end="onDragEnd">
-      <template #item="{ element, index }">
-        <div
-            class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start"
-            :class="{ 'bg-warning-subtle': element.id === lastMovedId }"
-        >
-          <!-- Drag Handle -->
-
-          <div class="me-md-3">
-            <div>
-              <i class="bi bi-grip-vertical drag-handle me-3" aria-hidden="true"></i>
-              <strong>{{ index + 1 }}. {{ element.name }}</strong>
-            </div>
-            <div class="mt-1 d-flex flex-wrap">
-              <span
-                  v-for="cat in element.courseCategories"
-                  :key="cat"
-                  class="badge me-1 mb-1 text-black"
-                  :style="{ backgroundColor: categoryColor(cat) }"
-              >
-                {{ categoryLabelMap[cat] || cat }}
-              </span>
-            </div>
-            <div class="d-flex flex-wrap gap-1 mt-2 mt-md-0">
-              <button class="btn btn-sm btn-outline-secondary" :disabled="index === 0 || pauseSelected"
-                      @click="moveUp(index)" title="Einen nach oben">
-                <i class="bi bi-chevron-up"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-secondary"
-                      :disabled="index === preferences.length - 1 || pauseSelected" @click="moveDown(index)"
-                      title="Einen nach unten">
-                <i class="bi bi-chevron-down"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-secondary" :disabled="index === 0 || pauseSelected"
-                      @click="moveToTop(index)" title="Ganz nach oben">
-                <i class="bi bi-arrow-up"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-secondary"
-                      :disabled="index === preferences.length - 1 || pauseSelected" @click="moveToBottom(index)"
-                      title="Ganz nach unten">
-                <i class="bi bi-arrow-down"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-info" @click="showInfo(element)" :disabled="pauseSelected"
-                      title="Kursinfo anzeigen">
-                <i class="bi bi-info-circle"></i>
-              </button>
+      <!-- Kursliste -->
+      <draggable
+          v-model="preferences"
+          item-key="id"
+          class="list-group"
+          :disabled="isSaving"
+          handle=".drag-handle"
+          ghost-class="drag-ghost"
+          @end="onDragEnd">
+        <template #item="{ element, index }">
+          <div
+              class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start"
+              :class="{ 'bg-warning-subtle': element.id === lastMovedId }"
+          >
+            <div class="me-md-3 flex-grow-1">
+              <div>
+                <i class="bi bi-grip-vertical drag-handle me-3" aria-hidden="true"></i>
+                <strong>{{ index + 1 }}. {{ element.name }}</strong>
+              </div>
+              <div class="mt-1 d-flex flex-wrap">
+                <span
+                    v-for="cat in element.courseCategories"
+                    :key="cat"
+                    class="badge me-1 mb-1"
+                    :style="{ 
+                      backgroundColor: getCategoryInfo(cat).color,
+                      color: getCategoryInfo(cat).textColor
+                    }"
+                >
+                  {{ categoryLabelMap[cat as CategoryCode] || cat }}
+                </span>
+              </div>
+              <div class="d-flex flex-wrap gap-1 mt-2 mt-md-0">
+                <button 
+                    class="btn btn-sm btn-outline-secondary" 
+                    :disabled="index === 0 || isSaving"
+                    @click="moveUp(index)" 
+                    aria-label="Kurs einen Platz nach oben bewegen"
+                >
+                  <i class="bi bi-chevron-up" aria-hidden="true"></i>
+                </button>
+                <button 
+                    class="btn btn-sm btn-outline-secondary"
+                    :disabled="index === preferences.length - 1 || isSaving" 
+                    @click="moveDown(index)"
+                    aria-label="Kurs einen Platz nach unten bewegen"
+                >
+                  <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                </button>
+                <button 
+                    class="btn btn-sm btn-outline-secondary" 
+                    :disabled="index === 0 || isSaving"
+                    @click="moveToTop(index)" 
+                    aria-label="Kurs ganz nach oben bewegen"
+                >
+                  <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                </button>
+                <button 
+                    class="btn btn-sm btn-outline-secondary"
+                    :disabled="index === preferences.length - 1 || isSaving" 
+                    @click="moveToBottom(index)"
+                    aria-label="Kurs ganz nach unten bewegen"
+                >
+                  <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                </button>
+                <button 
+                    class="btn btn-sm btn-outline-info" 
+                    @click="showInfo(element)" 
+                    :disabled="isSaving"
+                    aria-label="Kursinfo anzeigen"
+                >
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </template>
-    </draggable>
+        </template>
+      </draggable>
+
+      <!-- Saving Indicator -->
+      <div v-if="isSaving && !navigationDirection" class="text-center mt-3 text-muted small">
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Speichere Änderungen...
+      </div>
+    </template>
 
     <!-- Info-Modal -->
-    <div class="modal fade" ref="infoModalRef" id="infoModal" tabindex="-1">
+    <div class="modal fade" ref="infoModalRef" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel">
       <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">{{ selectedCourse?.name || 'Kursinfo' }}</h5>
-            <button type="button" class="btn-close" @click="closeModal"></button>
+            <h5 class="modal-title" id="infoModalLabel">{{ selectedCourse?.name || 'Kursinfo' }}</h5>
+            <button type="button" class="btn-close" @click="closeModal" aria-label="Schließen"></button>
           </div>
           <div class="modal-body">
             <p v-if="selectedCourse?.description?.trim()">
@@ -135,201 +171,235 @@
         </div>
       </div>
     </div>
+    
     <div class="position-fixed bottom-0 mb-4">
       <ErrorBanner/>
     </div>
   </div>
 </template>
 
-<script setup>
-import {ref, onMounted, watch, computed, nextTick} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
+<script setup lang="ts">
+import { ref, onMounted, watch, computed, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useDebounceFn } from '@vueuse/core'
 import draggable from 'vuedraggable'
+import { useErrorStore } from '~/stores/error'
+import { weekdayLabels } from '~/utils/weekdays'
+import { categoryLabelMap, categoryColors, getCategoryInfo, type CategoryCode } from '~/utils/categories'
 
-const {$authFetch} = useNuxtApp()
+// Types
+interface Course {
+  id: number
+  name: string
+  courseCategories: string[]
+  description?: string
+}
+
+interface Block {
+  id: number
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+}
+
+interface PreferencesStatus {
+  progress: number
+  categories: string[]
+  isCategoryDistributionOk: boolean
+  readyToSubmit: boolean
+  advices: string[]
+}
+
+type NavigationDirection = 'prev' | 'next' | null
+
+// Composables
+const { $authFetch } = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
-import {useErrorStore} from '~/stores/error'
-
 const errorStore = useErrorStore()
 
-
-const blocks = ref([])
+// State
+const blocks = ref<Block[]>([])
 const currentBlockIndex = ref(-1)
 const currentBlock = computed(() => blocks.value[currentBlockIndex.value] || null)
-const allCourses = ref([])
-const preferencesStatus = ref()
+const allCourses = ref<Course[]>([])
+const preferencesStatus = ref<PreferencesStatus>()
 
+const selectedCourse = ref<Course | null>(null)
+const alreadyAssignedCourse = ref<Course | null>(null)
+const preferences = ref<Course[]>([])
+const lastMovedId = ref<number | null>(null)
+
+const isSaving = ref(false)
+const navigationDirection = ref<NavigationDirection>(null)
+
+const infoModalRef = ref()
+let modalInstance: any = null
+
+// Computed
 const currentBlockLabel = computed(() => {
   const block = currentBlock.value
   if (!block) return 'Block'
-  const dayMap = {
-    MONDAY: 'Montag',
-    TUESDAY: 'Dienstag',
-    WEDNESDAY: 'Mittwoch',
-    THURSDAY: 'Donnerstag',
-    FRIDAY: 'Freitag'
-  }
-  const day = dayMap[block.dayOfWeek] || block.dayOfWeek
+  const day = weekdayLabels[block.dayOfWeek] || block.dayOfWeek
   return `${day} ${block.startTime} – ${block.endTime}`
 })
 
-const pauseSelected = ref(false)
-const selectedCourse = ref(null)
+const hasPreviousBlock = computed(() => currentBlockIndex.value > 0)
+const hasNextBlock = computed(() => currentBlockIndex.value < blocks.value.length - 1)
 
-const infoModalRef = ref()
-let modalInstance = null
-
-const alreadyAssignedCourse = ref(null)
-const preferences = ref([])
-
-const categoryLabelMap = {
-  iLa: "iLa",
-  KuP: "Kreativität und Praxis",
-  BuE: "Bewegung und Entspannung",
-  FuF: "Fordern und Fördern",
-  SoL: "Selbstorganisiertes Lernen"
-}
-
-const categoryColor = (code) => {
-  const colorMap = {
-    iLa: "#E0E0D9",
-    KuP: "#F1938B",
-    BuE: "#B9D3B5",
-    FuF: "#FFFEA6",
-    SoL: "#000000"
-  }
-  return colorMap[code] || colorMap['iLa']
-}
-
+// API Calls
 const fetchPreferencesStatus = async () => {
-  preferencesStatus.value = await $authFetch("/preferences-status")
+  try {
+    preferencesStatus.value = await $authFetch("/preferences-status")
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden des Status')
+  }
 }
 
 const fetchBlocks = async () => {
-  blocks.value = await $authFetch("/blocks")
+  try {
+    blocks.value = await $authFetch("/blocks")
 
-  const currentId = Number(route.params.blockId)
-  const index = blocks.value.findIndex(b => b.id === currentId)
-  if (index !== -1) {
-    currentBlockIndex.value = index
-    await fetchPreferences(currentId)
-  } else {
-    router.replace("/preferences")
+    const currentId = Number(route.params.blockId)
+    const index = blocks.value.findIndex(b => b.id === currentId)
+    if (index !== -1) {
+      currentBlockIndex.value = index
+      await fetchPreferences(currentId)
+    } else {
+      router.replace("/preferences")
+    }
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Blöcke')
   }
 }
 
-const fetchPreferences = async (blockId) => {
-  // eventuell bereits bestehende Zuordnungen
-  const assignmentsResponse = await $authFetch(`/assignments/${blockId}`)
-  if (assignmentsResponse.assignment) {
-    console.log('already assigned: ' + assignmentsResponse.assignment.course)
-    alreadyAssignedCourse.value = assignmentsResponse.assignment.course
-  } else { // Präferenzen laden
-    const preferencesResponse = await $authFetch(`/preferences/${blockId}`)
+const fetchPreferences = async (blockId: number) => {
+  try {
+    // Prüfen ob bereits zugewiesen
+    const assignmentsResponse: any = await $authFetch(`/assignments/${blockId}`)
+    if (assignmentsResponse.assignment) {
+      alreadyAssignedCourse.value = assignmentsResponse.assignment.course
+      return
+    }
 
-    pauseSelected.value = preferencesResponse.pauseSelected || preferencesResponse.courses?.length === 0
+    // Präferenzen laden
+    const preferencesResponse: any = await $authFetch(`/preferences/${blockId}`)
 
-    const courseMap = new Map(preferencesResponse.courses.map(c => [c.id, c]))
-    // Kurse separat merken (z. B. für spätere Verwendung)
+    const courseMap = new Map(preferencesResponse.courses.map((c: Course) => [c.id, c]))
     allCourses.value = preferencesResponse.courses
 
     // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
     preferences.value = (preferencesResponse.preferences?.preferences.length > 0)
-        ? preferencesResponse.preferences.preferences.map(id => courseMap.get(id)).filter(Boolean)
+        ? preferencesResponse.preferences.preferences.map((id: number) => courseMap.get(id)).filter(Boolean)
         : [...preferencesResponse.courses]
+    
+    await fetchPreferencesStatus()
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Präferenzen')
   }
-  await fetchPreferencesStatus()
 }
 
 const savePreferences = async () => {
-  if (!currentBlock.value) return
+  if (!currentBlock.value || isSaving.value) return
+  
+  isSaving.value = true
   const payload = {
-    pauseSelected: pauseSelected.value,
     preferences: preferences.value.map(c => c.id),
   }
+  
   try {
     await $authFetch(`/preferences/${currentBlock.value.id}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    await fetchPreferences(currentBlock.value.id)
-  } catch (err) {
-    errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
-    console.error("Fehler beim Speichern vor Navigation:", err)
+    // Status aktualisieren
+    await fetchPreferencesStatus()
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Speichern')
+    throw err
+  } finally {
+    isSaving.value = false
   }
 }
 
+// Debounced save für UI-Interaktionen
+const debouncedSave = useDebounceFn(async () => {
+  await savePreferences()
+}, 800)
+
+// Navigation
 const goToPreviousBlock = async () => {
-  if (currentBlockIndex.value > 0) {
+  if (currentBlockIndex.value > 0 && !isSaving.value) {
     try {
+      navigationDirection.value = 'prev'
       await savePreferences()
       const prevBlock = blocks.value[currentBlockIndex.value - 1]
-      router.push(`/preferences/${prevBlock.id}`)
-    } catch (err) {
-      console.error("Fehler beim Speichern vor Navigation:", err)
+      await router.push(`/preferences/${prevBlock.id}`)
+    } catch (err: any) {
+      errorStore.show(err?.data?.message ?? 'Fehler beim Navigieren')
+    } finally {
+      navigationDirection.value = null
     }
   }
 }
 
 const goToNextBlock = async () => {
-  if (currentBlockIndex.value < blocks.value.length - 1) {
+  if (currentBlockIndex.value < blocks.value.length - 1 && !isSaving.value) {
     try {
+      navigationDirection.value = 'next'
       await savePreferences()
       const nextBlock = blocks.value[currentBlockIndex.value + 1]
-      router.push(`/preferences/${nextBlock.id}`)
-    } catch (err) {
-      errorStore.show(err?.data?.message ?? 'Es ist ein interner Fehler aufgetreten: ' + err)
-      console.error("Fehler beim Speichern vor Navigation:", err)
+      await router.push(`/preferences/${nextBlock.id}`)
+    } catch (err: any) {
+      errorStore.show(err?.data?.message ?? 'Fehler beim Navigieren')
+    } finally {
+      navigationDirection.value = null
     }
   }
 }
 
-const hasPreviousBlock = computed(() => currentBlockIndex.value > 0)
-const hasNextBlock = computed(() => currentBlockIndex.value < blocks.value.length - 1)
+// Move operations - refactored to reduce duplication
+const moveCourse = (fromIndex: number, toIndex: number) => {
+  const item = preferences.value.splice(fromIndex, 1)[0]
+  preferences.value.splice(toIndex, 0, item)
+  lastMovedId.value = item.id
+  debouncedSave()
+}
 
-const moveUp = async (index) => {
+const moveUp = (index: number) => {
   if (index > 0) {
-    const temp = preferences.value[index - 1]
-    preferences.value[index - 1] = preferences.value[index]
-    preferences.value[index] = temp
-    lastMovedId.value = preferences.value[index - 1].id
-    await savePreferences()
+    moveCourse(index, index - 1)
   }
 }
 
-const moveDown = async (index) => {
+const moveDown = (index: number) => {
   if (index < preferences.value.length - 1) {
-    const temp = preferences.value[index + 1]
-    preferences.value[index + 1] = preferences.value[index]
-    preferences.value[index] = temp
-    lastMovedId.value = preferences.value[index + 1].id
-    await savePreferences()
+    moveCourse(index, index + 1)
   }
 }
 
-const moveToTop = async (index) => {
-  const item = preferences.value.splice(index, 1)[0]
-  preferences.value.unshift(item)
-  lastMovedId.value = item.id
-  await savePreferences()
+const moveToTop = (index: number) => {
+  moveCourse(index, 0)
 }
 
-const moveToBottom = async (index) => {
-  const item = preferences.value.splice(index, 1)[0]
-  preferences.value.push(item)
-  lastMovedId.value = item.id
-  await savePreferences()
+const moveToBottom = (index: number) => {
+  moveCourse(index, preferences.value.length - 1)
 }
 
 const onDragEnd = async () => {
-  console.log('drag end')
-  await savePreferences()
-  await fetchPreferences(currentBlock.value.id)
+  await debouncedSave()
 }
 
-const lastMovedId = ref(null)
+// Modal
+const showInfo = (course: Course) => {
+  selectedCourse.value = course
+  modalInstance?.show()
+}
+
+const closeModal = () => modalInstance?.hide()
+
+// Watchers
 watch(lastMovedId, () => {
   if (lastMovedId.value) {
     setTimeout(() => {
@@ -338,38 +408,26 @@ watch(lastMovedId, () => {
   }
 })
 
-const showInfo = (course) => {
-  selectedCourse.value = course
-  modalInstance?.show()
-}
+watch(() => route.params.blockId, async (newVal) => {
+  const newIndex = blocks.value.findIndex(b => b.id === Number(newVal))
+  if (newIndex !== -1) {
+    currentBlockIndex.value = newIndex
+    alreadyAssignedCourse.value = null
+    await fetchPreferences(Number(newVal))
+  }
+})
 
-const closeModal = () => modalInstance?.hide()
-
+// Lifecycle
 onMounted(async () => {
   await fetchBlocks()
   await nextTick()
   if (window.bootstrap && infoModalRef.value) {
     modalInstance = new window.bootstrap.Modal(infoModalRef.value)
   }
-  await fetchPreferencesStatus()
-})
-
-watch(pauseSelected, async (newVal) => {
-  console.log('pause selected: ' + newVal)
-  await savePreferences()
-  await fetchPreferences(currentBlock.value.id)
-})
-
-watch(() => route.params.blockId, async (newVal) => {
-  const newIndex = blocks.value.findIndex(b => b.id === Number(newVal))
-  if (newIndex !== -1) {
-    currentBlockIndex.value = newIndex
-    await fetchPreferences(Number(newVal))
-  }
 })
 </script>
 
-<style>
+<style scoped>
 .drag-ghost {
   opacity: 0.5;
 }

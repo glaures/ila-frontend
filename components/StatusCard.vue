@@ -128,7 +128,7 @@ const submitPreferences = async () => {
   } catch (e) {
     // handle error if needed
   } finally {
-    submitting.value = +false
+    submitting.value = false  // Fixed: was +false
   }
 }
 

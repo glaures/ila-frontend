@@ -28,6 +28,7 @@ const items = [
   { to: '/admin/users', label: 'Schüler', icon: 'bi bi-person-lines-fill' },
   { to: '/admin/problems', label: 'Probleme', icon: 'bi bi-exclamation-diamond' },
   { to: '/admin/assignments', label: 'Druck-Übersichten', icon: 'bi bi-printer' },
+  { to: '/admin/beste-schule-import', label: 'Import Beste Schule', icon: 'bi bi-arrow-up-right-square' },
 ]
 
 function isActive(item: { to: string }) {
