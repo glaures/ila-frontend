@@ -102,7 +102,8 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, computed} from 'vue'
+import {ref, computed, watch} from 'vue'
+import { usePeriodContextStore } from '~/stores/periodContext'
 
 definePageMeta({layout: 'admin', title: 'Kurszuweisungen'})
 
@@ -137,6 +138,8 @@ interface CourseUserAssignmentDto {
 }
 
 const {$authFetch} = useNuxtApp() as any
+const periodStore = usePeriodContextStore()
+const periodId = computed(() => periodStore.selectedId)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -184,10 +187,16 @@ function displayInstructor(c: CourseDto) {
 }
 
 async function loadBlocks() {
+  // Nur laden, wenn eine gültige Period-ID vorhanden ist
+  if (!periodId.value) {
+    loading.value = false
+    return
+  }
+
   error.value = null
   loading.value = true
   try {
-    const data = await $authFetch('/blocks')
+    const data = await $authFetch(`/blocks?period-id=${periodId.value}`)
     blocks.value = data as BlockDto[]
     if (!selectedDay.value && blocks.value.length) {
       selectedDay.value = weekdaysAvailable.value[0] || ''
@@ -248,7 +257,17 @@ async function reloadAll() {
   if (selectedDay.value) await loadCoursesAndAssignmentsForDay(selectedDay.value)
 }
 
-onMounted(loadBlocks)
+// Watch auf periodId - lädt Blöcke neu, wenn sich die Period ändert
+watch(periodId, (newPeriodId) => {
+  if (newPeriodId) {
+    // Bei Period-Wechsel: Zurücksetzen und neu laden
+    blocks.value = []
+    selectedDay.value = ''
+    coursesByBlock.value = {}
+    assignmentsByCourse.value = {}
+    loadBlocks()
+  }
+}, { immediate: true }) // immediate: true führt den Watch sofort aus, falls bereits eine Period vorhanden ist
 </script>
 
 <style scoped>

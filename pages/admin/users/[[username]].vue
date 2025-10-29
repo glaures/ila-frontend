@@ -1,9 +1,9 @@
 <template>
-  <div class="container mt-4">
-    <h1 class="mb-4">Kurszuweisungen verwalten</h1>
+  <div class="container-fluid py-3" @keydown="onKeydown">
+    <div class="h4 m-0">Schüler</div>
 
     <!-- Schülersuche -->
-    <div class="mb-4">
+    <div class="mb-4 mt-3">
       <label class="form-label">Schüler suchen</label>
       <input
           v-model="studentSearch"
@@ -70,7 +70,10 @@
               :key="course.courseId"
               @click="selectCourse(course)"
           >
-            <div class="text-muted small">{{course.block?.dayOfWeek}}&nbsp;{{ course.block.startTime }}-{{ course.block.endTime }}</div>
+            <div class="text-muted small">{{ course.block?.dayOfWeek }}&nbsp;{{
+                course.block.startTime
+              }}-{{ course.block.endTime }}
+            </div>
             <div>[{{ course.courseId }}] {{ course.name }}</div>
           </li>
         </ul>
@@ -125,7 +128,7 @@ const enrichedCourses = computed(() => {
 })
 
 watchEffect(async () => {
-  if(periodContextStore.selectedPeriod)
+  if (periodContextStore.selectedPeriod)
     courses.value = await $authFetch(`/courses?period-id=${periodContextStore.selectedPeriod.id}`)
 })
 

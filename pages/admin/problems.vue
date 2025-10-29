@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { usePeriodContextStore } from '~/stores/periodContext'
+import {computed, watch} from "vue";
+
 type Problem = {
   description: string
   type: string
@@ -6,6 +9,8 @@ type Problem = {
 }
 
 const { $authFetch } = useNuxtApp() as any
+const periodStore = usePeriodContextStore()
+const periodId = computed(() => periodStore.selectedId)
 
 definePageMeta({
   layout: 'admin' // dein Admin-Layout
@@ -30,17 +35,28 @@ function resolveFixRoute(p: Problem): string | null {
 const hasProblems = computed(() => problems.value.length > 0)
 
 async function loadProblems() {
+  // Nur laden, wenn eine gültige Period-ID vorhanden ist
+  if (!periodId.value) {
+    loading.value = false
+    return
+  }
+
   loading.value = true
   try {
-    const data = await $authFetch('/problems')
-    // Absicherung gegen „komische“ Antworten
+    const data = await $authFetch(`/problems?period-id=${periodId.value}`)
+    // Absicherung gegen „komische" Antworten
     problems.value = Array.isArray(data) ? data as Problem[] : []
   } finally {
     loading.value = false
   }
 }
 
-onMounted(loadProblems)
+// Watch auf periodId - lädt Probleme, wenn sich die Period ändert
+watch(periodId, (newPeriodId) => {
+  if (newPeriodId) {
+    loadProblems()
+  }
+}, { immediate: true }) // immediate: true führt den Watch sofort aus, falls bereits eine Period vorhanden ist
 </script>
 
 <template>
