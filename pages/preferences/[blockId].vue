@@ -90,7 +90,7 @@
                     v-for="cat in element.courseCategories"
                     :key="cat"
                     class="badge me-1 mb-1"
-                    :style="{ 
+                    :style="{
                       backgroundColor: getCategoryInfo(cat).color,
                       color: getCategoryInfo(cat).textColor
                     }"
@@ -279,6 +279,8 @@ const fetchPreferences = async (blockId: number) => {
     const assignmentsResponse: any = await $authFetch(`/assignments/${blockId}`)
     if (assignmentsResponse.assignment) {
       alreadyAssignedCourse.value = assignmentsResponse.assignment.course
+      // Status auch bei bestehender Zuweisung laden, damit StatusCard angezeigt wird
+      await fetchPreferencesStatus()
       return
     }
     // alle angebotenen Kurse laden
