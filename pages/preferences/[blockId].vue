@@ -62,7 +62,7 @@
       <!-- Hilfetext -->
       <div class="alert alert-info small">
         <i class="bi bi-info-circle me-2"></i>
-        Sortiere die Kurse nach Deiner Präferenz. Der Algorithmus berücksichtigt deine Präferenzen 
+        Sortiere die Kurse nach Deiner Präferenz. Der Algorithmus berücksichtigt deine Präferenzen
         über alle Blöcke hinweg bei der finalen Zuweisung. Nutze die Pfeile oder Drag & Drop.
       </div>
 
@@ -99,41 +99,41 @@
                 </span>
               </div>
               <div class="d-flex flex-wrap gap-1 mt-2 mt-md-0">
-                <button 
-                    class="btn btn-sm btn-outline-secondary" 
+                <button
+                    class="btn btn-sm btn-outline-secondary"
                     :disabled="index === 0 || isSaving"
-                    @click="moveUp(index)" 
+                    @click="moveUp(index)"
                     aria-label="Kurs einen Platz nach oben bewegen"
                 >
                   <i class="bi bi-chevron-up" aria-hidden="true"></i>
                 </button>
-                <button 
+                <button
                     class="btn btn-sm btn-outline-secondary"
-                    :disabled="index === preferences.length - 1 || isSaving" 
+                    :disabled="index === preferences.length - 1 || isSaving"
                     @click="moveDown(index)"
                     aria-label="Kurs einen Platz nach unten bewegen"
                 >
                   <i class="bi bi-chevron-down" aria-hidden="true"></i>
                 </button>
-                <button 
-                    class="btn btn-sm btn-outline-secondary" 
+                <button
+                    class="btn btn-sm btn-outline-secondary"
                     :disabled="index === 0 || isSaving"
-                    @click="moveToTop(index)" 
+                    @click="moveToTop(index)"
                     aria-label="Kurs ganz nach oben bewegen"
                 >
                   <i class="bi bi-arrow-up" aria-hidden="true"></i>
                 </button>
-                <button 
+                <button
                     class="btn btn-sm btn-outline-secondary"
-                    :disabled="index === preferences.length - 1 || isSaving" 
+                    :disabled="index === preferences.length - 1 || isSaving"
                     @click="moveToBottom(index)"
                     aria-label="Kurs ganz nach unten bewegen"
                 >
                   <i class="bi bi-arrow-down" aria-hidden="true"></i>
                 </button>
-                <button 
-                    class="btn btn-sm btn-outline-info" 
-                    @click="showInfo(element)" 
+                <button
+                    class="btn btn-sm btn-outline-info"
+                    @click="showInfo(element)"
                     :disabled="isSaving"
                     aria-label="Kursinfo anzeigen"
                 >
@@ -171,7 +171,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="position-fixed bottom-0 mb-4">
       <ErrorBanner/>
     </div>
@@ -281,18 +281,39 @@ const fetchPreferences = async (blockId: number) => {
       alreadyAssignedCourse.value = assignmentsResponse.assignment.course
       return
     }
+    // alle angebotenen Kurse laden
+    const coursesResponse = await $authFetch(`/courses?block-id=${blockId}`)
+    const courseMap = new Map(coursesResponse.map((c: Course) => [c.id, c]))
+    allCourses.value = coursesResponse
 
     // Präferenzen laden
     const preferencesResponse: any = await $authFetch(`/preferences/${blockId}`)
 
-    const courseMap = new Map(preferencesResponse.courses.map((c: Course) => [c.id, c]))
-    allCourses.value = preferencesResponse.courses
+    const hasExistingPreferences = preferencesResponse.preferencedCourseIds?.length > 0
 
     // Wenn keine gespeicherten Präferenzen: komplette Kursliste verwenden
-    preferences.value = (preferencesResponse.preferences?.preferences.length > 0)
-        ? preferencesResponse.preferences.preferences.map((id: number) => courseMap.get(id)).filter(Boolean)
-        : [...preferencesResponse.courses]
-    
+    preferences.value = hasExistingPreferences
+        ? preferencesResponse.preferencedCourseIds.map((id: number) => courseMap.get(id)).filter(Boolean)
+        : [...coursesResponse]
+
+    // Wenn keine Präferenzen vorhanden waren, speichere die initiale Liste direkt
+    if (!hasExistingPreferences && preferences.value.length > 0) {
+      const payload = {
+        preferencedCourseIds: preferences.value.map(c => c.id),
+      }
+
+      try {
+        await $authFetch(`/preferences/${blockId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } catch (err: any) {
+        console.error('Fehler beim initialen Speichern:', err)
+        // Fehler nicht anzeigen, da dies im Hintergrund passiert
+      }
+    }
+
     await fetchPreferencesStatus()
   } catch (err: any) {
     errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Präferenzen')
@@ -301,12 +322,12 @@ const fetchPreferences = async (blockId: number) => {
 
 const savePreferences = async () => {
   if (!currentBlock.value || isSaving.value) return
-  
+
   isSaving.value = true
   const payload = {
-    preferences: preferences.value.map(c => c.id),
+    preferencedCourseIds: preferences.value.map(c => c.id),
   }
-  
+
   try {
     await $authFetch(`/preferences/${currentBlock.value.id}`, {
       method: 'POST',
