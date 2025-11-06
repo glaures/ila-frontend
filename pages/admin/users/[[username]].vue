@@ -112,9 +112,9 @@ const selectedCourse = ref(null)
 const feedback = ref({info: [], warning: [], error: []})
 
 const filteredStudents = computed(() => {
-  const q = studentSearch.value
+  const q = studentSearch.value.toLowerCase()
   if (!q) return []
-  return students.value.filter(s => s.firstName?.includes(q) || s.lastName?.includes(q))
+  return students.value.filter(s => s.firstName?.toLowerCase().includes(q) || s.lastName?.toLowerCase().includes(q))
 })
 
 const enrichedCourses = computed(() => {
