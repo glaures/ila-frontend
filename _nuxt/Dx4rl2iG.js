@@ -1,1 +1,0 @@
-import{e as a,c as n,a as e,o as r}from"./DTeB4Gn8.js";const l=a({__name:"index",setup(t){return(c,s)=>(r(),n("div",null,s[0]||(s[0]=[e("h1",{class:"mb-4"},"Administration",-1),e("p",null,"Bereich für die iLA Verwaltung.",-1),e("div",{class:"card"},[e("div",{class:"card-body"},[e("p",{class:"card-text"},"Wähle links den gewünschten Bereich")])],-1)])))}});export{l as default};
