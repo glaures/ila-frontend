@@ -26,6 +26,7 @@ const items = [
   { to: '/admin/bloecke', label: 'Blöcke',  icon: 'bi bi-clock-history' },
   { to: '/admin/kurse', label: 'Kurse',  icon: 'bi bi-chat-left-text' },
   { to: '/admin/users', label: 'Schüler', icon: 'bi bi-person-lines-fill' },
+  { to: '/admin/preference-status', label: 'Status Präferenzen', icon: 'bi bi-folder-check' },
   { to: '/admin/problems', label: 'Probleme', icon: 'bi bi-exclamation-diamond' },
   { to: '/admin/assignments', label: 'Druck-Übersichten', icon: 'bi bi-printer' },
   { to: '/admin/beste-schule-import', label: 'Import Beste Schule', icon: 'bi bi-arrow-up-right-square' },
