@@ -330,7 +330,7 @@ function onBlockChange(ev: Event) {
 <template>
   <div class="container-fluid py-3" @keydown="onKeydown">
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h1 class="h4 m-0">Kurse verwalten</h1>
+      <div class="h4 m-0">Kurse</div>
       <div>
         <button class="btn btn-outline-secondary me-2" @click="newCourse">Neuer Kurs</button>
         <button class="btn btn-outline-danger me-2" :disabled="!form.id" @click="deleteCourse">Löschen</button>
@@ -348,7 +348,7 @@ function onBlockChange(ev: Event) {
 
     <!-- Typeahead Search -->
     <div class="mb-3 position-relative" @focusin="typeaheadOpen = true">
-      <label class="form-label fw-semibold">Kurs suchen</label>
+      <label class="form-label fw-semibold">Kurssuche</label>
       <input
           v-model="search"
           @focus="typeaheadOpen = true"

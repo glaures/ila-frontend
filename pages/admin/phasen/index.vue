@@ -1,13 +1,13 @@
 <template>
   <div class="container-fluid py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="h4 m-0">Phasen</div>
+    </div>
     <div class="row g-3">
       <!-- Linke Spalte: Suche / Liste / Neu -->
       <div class="col-12 col-xl-4">
-        <div class="card shadow-sm">
+        <div class="card">
           <div class="card-body">
-            <h5 class="card-title mb-3">Phasen verwalten</h5>
-
-            <!-- Typeahead-Suche auf lokal geladenen Daten -->
             <label class="form-label">Suchen</label>
             <input
                 v-model="searchQuery"

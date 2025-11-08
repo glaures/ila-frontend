@@ -238,13 +238,15 @@ watch(selectedBlockId, () => {
 
 <template>
   <div class="container-fluid py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="h4 m-0">Blöcke</div>
+    </div>
     <div class="row g-3">
       <!-- Linke Spalte: Liste -->
       <div class="col-12 col-lg-5">
         <div class="card shadow-sm">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <h5 class="mb-0">Blöcke</h5>
               <div class="btn-group">
                 <button class="btn btn-sm btn-outline-primary" @click="createNew">
                   Neu

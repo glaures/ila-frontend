@@ -1,6 +1,8 @@
 <template>
-  <div>
-    <h1>Kursbelegungen – Übersicht &amp; Druck</h1>
+  <div class="container-fluid py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="h4 m-0">Kursbelegungen</div>
+    </div>
     <!-- Header / Controls (screen only) -->
     <div class="d-flex align-items-center justify-content-between mb-3 d-print-none">
       <div class="btn-group">

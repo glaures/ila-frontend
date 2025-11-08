@@ -1,6 +1,8 @@
 <template>
-  <div class="container-fluid py-4">
-    <h1 class="mb-4">Präferenz-Eingaben Übersicht</h1>
+  <div class="container-fluid py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="h4 m-0">Präferenzen</div>
+    </div>
 
     <!-- Ladeanzeige -->
     <div v-if="loading" class="text-center py-5">

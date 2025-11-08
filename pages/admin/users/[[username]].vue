@@ -1,10 +1,12 @@
 <template>
   <div class="container-fluid py-3" @keydown="onKeydown">
-    <div class="h4 m-0">Schüler</div>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="h4 m-0">Manuelle Zuweisungen</div>
+    </div>
 
     <!-- Schülersuche -->
     <div class="mb-4 mt-3">
-      <label class="form-label">Schüler suchen</label>
+      <label class="form-label">Schülersuche</label>
       <input
           v-model="studentSearch"
           class="form-control"

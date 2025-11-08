@@ -1,9 +1,10 @@
 <template>
-  <div class="container my-5">
+  <div class="container my-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="h4 m-0">Zuweisungs-Prozess</div>
+    </div>
     <div class="row">
       <div class="col-12">
-        <h1 class="mb-4">Kurszuweisung</h1>
-
         <!-- Period Selection -->
         <div class="card mb-4">
           <div class="card-body">
