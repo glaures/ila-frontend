@@ -1,1 +1,0 @@
-import{u as s}from"./BVwVZEUG.js";import{k as t,c as r,t as a,h as n,o as m}from"./qDpktqzJ.js";const _={__name:"home",setup(c){const e=s(),o=t(()=>e.username);return(u,l)=>(m(),r("div",null," Willkommen, "+a(n(o)),1))}};export{_ as default};
