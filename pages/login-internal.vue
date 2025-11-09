@@ -1,6 +1,5 @@
 <!-- /pages/login-internal.vue -->
 <script setup lang="ts">
-import versionData from '~/version.json'
 import { useErrorStore } from '~/stores/error'
 import { useToastStore } from '~/stores/toast'
 
@@ -85,27 +84,27 @@ function handleKeyPress(event: KeyboardEvent) {
   <div class="container min-vh-100 d-flex align-items-center justify-content-center">
     <div class="col-12 col-md-8 col-lg-5">
       <div class="card shadow-sm border-0">
-        <div class="card-body p-4 p-md-5">
+        <div class="card-body p-3 p-md-5">
 
           <!-- Logo -->
-          <div class="text-center mb-4">
+          <div class="text-center mb-3">
             <img
                 src="/images/logo_johanna_moosdorf.png"
                 alt="Logo der Johanna-Moosdorf-Schule"
                 class="img-fluid"
-                style="max-height: 120px; object-fit: contain;"
+                style="max-height: 80px; object-fit: contain;"
                 loading="eager"
             />
           </div>
 
           <!-- Titel & Text -->
-          <h1 class="h4 mb-2 text-center">iLA Login</h1>
+          <h1 class="h4 mb-1 text-center">iLA Login</h1>
           <p class="text-muted mb-4 text-center">
             Anmeldung für Nutzer ohne IServ-Konto
           </p>
 
           <!-- Login-Formular -->
-          <div class="mb-3">
+          <div class="mb-2">
             <label for="username" class="form-label">Benutzername</label>
             <input
                 id="username"
@@ -119,7 +118,7 @@ function handleKeyPress(event: KeyboardEvent) {
             />
           </div>
 
-          <div class="mb-4">
+          <div class="mb-3">
             <label for="password" class="form-label">Passwort</label>
             <input
                 id="password"
@@ -147,7 +146,7 @@ function handleKeyPress(event: KeyboardEvent) {
             </span>
           </button>
 
-          <div class="mt-3 text-center">
+          <div class="mt-2 text-center">
             <small class="text-muted">
               Probleme bei der Anmeldung? <br/>
               Support Email an <a href="mailto:support@sandbox27.de" class="link-secondary">support@sandbox27.de</a>
@@ -156,7 +155,7 @@ function handleKeyPress(event: KeyboardEvent) {
           </div>
 
           <!-- Link zur IServ-Anmeldung -->
-          <hr class="my-4">
+          <hr class="my-2">
           <div class="text-center">
             <small class="text-muted">
               Schüler melden sich über <NuxtLink to="/" class="link-secondary">IServ</NuxtLink> an.
@@ -165,9 +164,9 @@ function handleKeyPress(event: KeyboardEvent) {
         </div>
       </div>
 
-      <div class="text-center mt-3">
+      <div class="text-center mt-2">
         <small class="text-muted">
-          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | v1.1.{{ versionData.build }}
+          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | <Version/>
         </small>
       </div>
     </div>

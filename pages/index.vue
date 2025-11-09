@@ -1,6 +1,6 @@
 <!-- /pages/index.vue -->
 <script setup lang="ts">
-import versionData from '~/version.json'
+import Version from "~/components/Version.vue";
 
 definePageMeta({
   authDisabled: true,
@@ -68,7 +68,7 @@ const errorStore = useErrorStore()
 
       <div class="text-center mt-3">
         <small class="text-muted">
-          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | v1.1.{{ versionData.build }}
+          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | <Version/>
         </small>
       </div>
     </div>

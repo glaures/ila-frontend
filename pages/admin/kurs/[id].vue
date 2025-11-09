@@ -83,7 +83,7 @@
                 </thead>
                 <tbody>
                 <tr v-for="assignment in sortedAssignments" :key="assignment.id">
-                  <td>{{ assignment.userUserName }}</td>
+                  <td>{{ assignment.userUserName }}<br><span class="text-muted small">Klasse {{assignment.grade}}</span></td>
                   <td>{{ assignment.firstName }}</td>
                   <td>{{ assignment.lastName }}</td>
                   <td class="text-end">

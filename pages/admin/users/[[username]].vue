@@ -32,6 +32,25 @@
     <!-- Kurszuweisungen anzeigen -->
     <div v-if="selectedStudent">
       <h5>Kurse von {{ selectedStudent.firstName }} {{ selectedStudent.lastName }}</h5>
+
+      <!-- Schülerinformationen -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Schülerinformationen</h6>
+          <div class="row">
+            <div class="col-md-4">
+              <strong>Klassenstufe:</strong> {{ selectedStudent.grade }}
+            </div>
+            <div class="col-md-4">
+              <strong>Benutzername:</strong> {{ selectedStudent.userName }}
+            </div>
+            <div class="col-md-4" v-if="selectedStudent.email">
+              <strong>E-Mail:</strong> {{ selectedStudent.email }}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <table class="table table-sm">
         <thead>
         <tr>
@@ -146,7 +165,24 @@ onMounted(async () => {
 })
 
 function selectStudent(student) {
-  selectedStudent.value = student
+  // Wenn nur ein String oder ein Objekt mit userName übergeben wird,
+  // hole das vollständige Student-Objekt aus dem students Array
+  let userName
+  if (typeof student === 'string') {
+    userName = student
+  } else if (student?.userName) {
+    userName = student.userName
+  } else {
+    return
+  }
+
+  const fullStudent = students.value.find(s => s.userName === userName)
+  if (!fullStudent) {
+    console.warn(`Student mit userName '${userName}' nicht gefunden`)
+    return
+  }
+
+  selectedStudent.value = fullStudent
   studentSearch.value = ''
   filteredStudents.value = []
   loadAssignments()

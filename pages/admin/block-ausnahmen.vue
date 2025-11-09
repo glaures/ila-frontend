@@ -5,7 +5,7 @@
     </div>
     <p class="text-muted">
       Hier können Sie Schüler oder ganze Klassenstufen von bestimmten Blocks ausnehmen
-      (z.B. für Klassenleiterrunden oder andere Verpflichtungen).
+      (z.B. für Klassenleiterstunden oder andere Verpflichtungen).
     </p>
 
     <div v-if="periodStore.selectedId">
@@ -88,7 +88,7 @@
                 v-model="reason"
                 type="text"
                 class="form-control"
-                placeholder="z.B. Klassenleiterrunde"
+                placeholder="z.B. Klassenleiterstunde"
                 maxlength="512"
             >
             <div class="form-text">
