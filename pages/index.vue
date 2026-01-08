@@ -56,10 +56,27 @@ const errorStore = useErrorStore()
             </span>
           </button>
 
+          <!-- Divider mit "oder" -->
+          <div class="position-relative my-4">
+            <hr class="text-muted">
+            <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">
+              oder
+            </span>
+          </div>
+
+          <!-- Interner Login für Nutzer ohne IServ -->
+          <div class="alert alert-info py-2 mb-3">
+            <small>
+              <strong>Kein IServ Account?</strong><br>
+              Externe Kursleiter können sich
+              <NuxtLink to="/login-internal" class="alert-link fw-bold">hier anmelden</NuxtLink>
+            </small>
+          </div>
+
           <div class="mt-3">
             <small class="text-muted">
               Probleme bei der Anmeldung? <br/>
-              Support Email an <a href="mailto:support@sandbox27.de" class="link-secondary">support@sandbox27.de</a>
+              Support Email an <a href="mailto:admin@johanna-moosdorf-schule.de" class="link-secondary">admin@johanna-moosdorf-schule.de</a>
               schreiben
             </small>
           </div>
@@ -68,7 +85,7 @@ const errorStore = useErrorStore()
 
       <div class="text-center mt-3">
         <small class="text-muted">
-          &copy; {{ new Date().getFullYear() }} Johanna-Moosdorf-Schule | <Version/>
+          <Version />
         </small>
       </div>
     </div>

@@ -49,21 +49,22 @@ async function handleLogin() {
     })
 
     // Response verarbeiten
-    const { token, username: returnedUsername, roles } = response as any
+    const { token, user, roles } = response as any
 
     // Token speichern
     localStorage.setItem('jwt', token)
 
     // Username im Store setzen
-    userStore.setUsername(returnedUsername)
-
-    console.log("roles: " + roles)
+    userStore.setUsername(user.username)
+    userStore.setName(user.name)
+    userStore.setRoles(roles)
 
     // Erfolgsmeldung
     toastStore.success('Erfolgreich angemeldet!')
 
     // Navigation
-    await navigateTo('/instructor/home')
+    await navigateTo(roles.includes('ADMIN') ? '/admin' :
+        roles.includes('COURSE_INSTRUCTOR') ? '/instructor/attendance' : '/preferences')
 
   } catch (err: any) {
     console.error('Login error:', err)

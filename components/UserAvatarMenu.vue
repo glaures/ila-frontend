@@ -33,7 +33,7 @@ import {useUserStore} from "~/stores/user.js";
 const userStore = useUserStore()
 
 // Hier evtl. dynamische Daten holen oder aus einem Store
-const displayName = computed(() => userStore.username)
+const displayName = computed(() => userStore.name)
 
 // Platzhalter-Bild, später mit echtem Avatar ersetzen
 const avatarUrl = ref('/images/avatar_placeholder.png')
