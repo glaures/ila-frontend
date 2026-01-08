@@ -184,6 +184,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDebounceFn } from '@vueuse/core'
 import draggable from 'vuedraggable'
 import { useErrorStore } from '~/stores/error'
+import { useUserStore } from '~/stores/user'
 import { weekdayLabels } from '~/utils/weekdays'
 import { categoryLabelMap, categoryColors, getCategoryInfo, type CategoryCode } from '~/utils/categories'
 
@@ -202,6 +203,16 @@ interface Block {
   endTime: string
 }
 
+interface CourseAssignment {
+  id: number
+  courseId: number
+  course: Course & { block: Block }
+  userUserName: string
+  firstName: string
+  lastName: string
+  grade: number
+}
+
 interface PreferencesStatus {
   progress: number
   categories: string[]
@@ -217,9 +228,11 @@ const { $authFetch } = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
 const errorStore = useErrorStore()
+const userStore = useUserStore()
 
 // State
 const blocks = ref<Block[]>([])
+const allAssignments = ref<CourseAssignment[]>([])
 const currentBlockIndex = ref(-1)
 const currentBlock = computed(() => blocks.value[currentBlockIndex.value] || null)
 const allCourses = ref<Course[]>([])
@@ -256,9 +269,56 @@ const fetchPreferencesStatus = async () => {
   }
 }
 
+const fetchAllAssignments = async () => {
+  try {
+    // Lade aktuelle Period
+    const currentPeriod: any = await $authFetch("/periods/current")
+    if (!currentPeriod?.id) {
+      throw new Error('Keine aktuelle Period gefunden')
+    }
+
+    // Hole Username aus Store
+    const username = userStore.username
+    if (!username) {
+      throw new Error('Kein Benutzername gefunden')
+    }
+
+    // Lade Assignments mit period-id und user-name
+    const response: any = await $authFetch(`/assignments?user-name=${encodeURIComponent(username)}&period-id=${currentPeriod.id}`)
+    allAssignments.value = response || []
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Zuweisungen')
+  }
+}
+
 const fetchBlocks = async () => {
   try {
-    blocks.value = await $authFetch("/blocks")
+    const allBlocks: Block[] = await $authFetch("/blocks")
+
+    // Lade alle Zuweisungen des Schülers
+    await fetchAllAssignments()
+
+    // Erstelle ein Set der blockIds, die bereits Zuweisungen haben
+    const assignedBlockIds = new Set(
+        allAssignments.value
+            .filter(assignment => assignment.course?.block?.id)
+            .map(assignment => assignment.course.block.id)
+    )
+
+    // Erstelle ein Set der Tage, an denen bereits Zuweisungen existieren
+    const assignedDays = new Set(
+        allAssignments.value
+            .filter(assignment => assignment.course?.block?.dayOfWeek)
+            .map(assignment => assignment.course.block.dayOfWeek)
+    )
+
+    // Filtere Blöcke:
+    // - Behalte Blöcke MIT Zuweisung (die werden dann mit der "Zuweisung erfolgt" Meldung angezeigt)
+    // - Behalte Blöcke an Tagen OHNE Zuweisung
+    // - Filtere Blöcke an Tagen MIT Zuweisung heraus, wenn sie selbst KEINE Zuweisung haben
+    blocks.value = allBlocks.filter(block =>
+        assignedBlockIds.has(block.id) || !assignedDays.has(block.dayOfWeek)
+    )
 
     const currentId = Number(route.params.blockId)
     const index = blocks.value.findIndex(b => b.id === currentId)
@@ -266,7 +326,15 @@ const fetchBlocks = async () => {
       currentBlockIndex.value = index
       await fetchPreferences(currentId)
     } else {
-      router.replace("/preferences")
+      // Wenn der aktuelle Block nicht mehr verfügbar ist (weil am selben Tag eine Zuweisung existiert)
+      // Prüfe, ob es überhaupt noch verfügbare Blöcke gibt
+      if (blocks.value.length > 0) {
+        // Navigiere zum ersten verfügbaren Block
+        await router.replace(`/preferences/${blocks.value[0].id}`)
+      } else {
+        // Keine Blöcke mehr verfügbar, zurück zur Übersicht
+        router.replace("/preferences")
+      }
     }
   } catch (err: any) {
     errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Blöcke')
