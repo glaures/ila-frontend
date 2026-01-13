@@ -16,6 +16,17 @@ type BlockDto = {
   applyToAllDays?: boolean | null
 }
 
+type UserDto = {
+  userName: string
+  firstName: string
+  lastName: string
+  email: string
+  grade: number
+  gender: string
+  ilaMember: boolean
+  roles: string[]
+}
+
 type CourseDto = {
   id?: number            // serververgeben (nicht editierbar)
   courseId: string       // vom Nutzer vergeben (mandatory)
@@ -24,7 +35,7 @@ type CourseDto = {
   courseCategories: string[]
   maxAttendees: number
   room?: string
-  instructor?: string
+  instructor?: UserDto | null  // GEÄNDERT: von string zu UserDto
   block?: BlockDto | null
   minAttendees: number
   grades: number[]
@@ -52,12 +63,19 @@ const periodId = computed(() => periodStore.selectedId) // <— direkt aus dem S
 // --- Daten ---
 const courses = ref<CourseDto[]>([])
 const blocks  = ref<BlockDto[]>([])
+const users = ref<UserDto[]>([])  // NEU: Alle Nutzer
 const selectedCourse = ref<CourseDto | null>(null)
 const selectedBlockId = ref<number | null>(null)
+const selectedInstructorUserName = ref<string | null>(null)  // NEU: Ausgewählter Kursleiter
 
 // --- Modal für Löschbestätigung ---
 const showDeleteModal = ref(false)
 const assignmentCount = ref(0)
+
+// --- Verfügbare Kursleiter (Nutzer ohne STUDENT-Rolle) ---
+const availableInstructors = computed(() => {
+  return users.value.filter(user => !user.roles.includes('STUDENT'))
+})
 
 // --- Typeahead ---
 const search = ref('')
@@ -65,12 +83,15 @@ const typeaheadOpen = ref(false)
 const filteredCourses = computed(() => {
   const q = search.value.trim().toLowerCase()
   if (!q) return courses.value.slice(0, 20)
-  return courses.value.filter(c =>
-      (c.courseId ?? '').toLowerCase().includes(q) ||
-      (c.name ?? '').toLowerCase().includes(q) ||
-      (c.description ?? '').toLowerCase().includes(q) ||
-      (c.instructor ?? '').toLowerCase().includes(q)
-  ).slice(0, 50)
+  return courses.value.filter(c => {
+    const instructorName = c.instructor
+        ? `${c.instructor.firstName} ${c.instructor.lastName}`.toLowerCase()
+        : ''
+    return (c.courseId ?? '').toLowerCase().includes(q) ||
+        (c.name ?? '').toLowerCase().includes(q) ||
+        (c.description ?? '').toLowerCase().includes(q) ||
+        instructorName.includes(q)
+  }).slice(0, 50)
 })
 
 // --- Formular ---
@@ -81,7 +102,7 @@ const form = ref<Partial<CourseDto>>({
   courseCategories: [],
   maxAttendees: undefined,
   room: '',
-  instructor: '',
+  instructor: null,  // GEÄNDERT: null statt ''
   block: null,
   minAttendees: 0,
   grades: [],
@@ -130,6 +151,14 @@ async function loadCoursesForPeriod() {
   }
 }
 
+async function loadUsers() {
+  try {
+    users.value = await $authFetch('/users')
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Nutzer: ' + err)
+  }
+}
+
 // --- Auswahl ---
 function selectCourse(c: CourseDto) {
   selectedCourse.value = { ...c }
@@ -141,7 +170,7 @@ function selectCourse(c: CourseDto) {
     courseCategories: Array.isArray(c.courseCategories) ? [...c.courseCategories] : [],
     maxAttendees: c.maxAttendees,
     room: c.room ?? '',
-    instructor: c.instructor ?? '',
+    instructor: c.instructor ?? null,  // GEÄNDERT: instructor-Objekt
     block: c.block ?? null,
     minAttendees: typeof c.minAttendees === 'number' ? c.minAttendees : 0,
     grades: Array.isArray(c.grades) ? [...c.grades].sort((a,b)=>a-b) : [],
@@ -150,6 +179,7 @@ function selectCourse(c: CourseDto) {
     manualAssignmentOnly: !!c.manualAssignmentOnly
   }
   selectedBlockId.value = c.block?.id ?? null
+  selectedInstructorUserName.value = c.instructor?.userName ?? null  // NEU: userName extrahieren
   search.value = displayCourse(c)
   typeaheadOpen.value = false
   router.replace({ path: route.path, query: { id: String(c.id ?? '') } })
@@ -157,6 +187,7 @@ function selectCourse(c: CourseDto) {
 function newCourse() {
   selectedCourse.value = null
   selectedBlockId.value = null
+  selectedInstructorUserName.value = null  // NEU: zurücksetzen
   form.value = {
     courseId: '',
     name: '',
@@ -164,7 +195,7 @@ function newCourse() {
     courseCategories: [],
     maxAttendees: undefined,
     room: '',
-    instructor: '',
+    instructor: null,  // GEÄNDERT: null statt ''
     block: null,
     minAttendees: 0,
     grades: [],
@@ -203,6 +234,16 @@ async function saveCourse() {
   try {
     const gradesSortedUnique = Array.from(new Set(form.value.grades ?? [])).sort((a,b)=>a-b)
     const isNewCourse = form.value.id == null
+
+    // Instructor-Objekt aus der Auswahl erstellen
+    let instructorDto: UserDto | null = null
+    if (selectedInstructorUserName.value) {
+      const selectedUser = users.value.find(u => u.userName === selectedInstructorUserName.value)
+      if (selectedUser) {
+        instructorDto = selectedUser
+      }
+    }
+
     const payload: any = {
       courseId: form.value.courseId!.trim(),
       name: form.value.name!.trim(),
@@ -210,7 +251,7 @@ async function saveCourse() {
       courseCategories: [...(form.value.courseCategories as string[])],
       maxAttendees: Number(form.value.maxAttendees),
       room: form.value.room?.trim() || '',
-      instructor: form.value.instructor?.trim() || '',
+      instructor: instructorDto,  // GEÄNDERT: vollständiges UserDto statt String
       blockId: (selectedBlockId.value !== null ? selectedBlockId.value : null),
       minAttendees: Number(form.value.minAttendees ?? 0),
       grades: gradesSortedUnique,
@@ -301,9 +342,20 @@ onMounted(async () => {
   if (!periodStore.initialized) {
     await periodStore.loadPeriods($authFetch)
   }
+  await loadUsers()  // NEU: Nutzer laden
   await loadBlocks()
   await loadCoursesForPeriod()
   tryPreselectFromRoute()
+})
+
+// Watch: Wenn Instructor-Auswahl sich ändert, form.instructor aktualisieren
+watch(selectedInstructorUserName, (newUserName) => {
+  if (newUserName) {
+    const selectedUser = users.value.find(u => u.userName === newUserName)
+    form.value.instructor = selectedUser ?? null
+  } else {
+    form.value.instructor = null
+  }
 })
 
 // Bei Wechsel der Phase: Kurse neu laden & Formular leeren
@@ -373,7 +425,9 @@ function onBlockChange(ev: Event) {
             <div>
               <span class="badge bg-secondary me-2">{{ c.courseId }}</span>
               <strong>{{ c.name }}</strong>
-              <small v-if="c.instructor" class="text-muted ms-2">({{ c.instructor }})</small>
+              <small v-if="c.instructor" class="text-muted ms-2">
+                ({{ c.instructor.firstName }} {{ c.instructor.lastName }})
+              </small>
               <div v-if="c.block" class="small text-muted mt-1">
                 {{ blockShortLabel(c.block) }}
               </div>
@@ -402,7 +456,17 @@ function onBlockChange(ev: Event) {
 
           <div class="col-12 col-md-4">
             <label class="form-label">Kursleiter</label>
-            <input v-model="form.instructor" class="form-control" type="text" />
+            <select v-model="selectedInstructorUserName" class="form-select">
+              <option :value="null">Kein Kursleiter</option>
+              <option
+                  v-for="user in availableInstructors"
+                  :key="user.userName"
+                  :value="user.userName"
+              >
+                {{ user.firstName }} {{ user.lastName }} ({{ user.userName }})
+              </option>
+            </select>
+            <div class="form-text">Nur Lehrer und Admins</div>
           </div>
 
           <div class="col-12">

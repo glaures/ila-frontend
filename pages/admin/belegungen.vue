@@ -119,6 +119,17 @@ interface BlockDto {
   applyToAllDays: boolean | null
 }
 
+interface UserDto {
+  userName: string
+  firstName: string
+  lastName: string
+  email: string
+  grade: number
+  gender: string
+  ilaMember: boolean
+  roles: string[]
+}
+
 interface CourseDto {
   id: number
   courseId: string
@@ -127,8 +138,9 @@ interface CourseDto {
   courseCategories: string[]
   maxAttendees: number
   room?: string
-  instructor?: string
+  instructor?: UserDto | null  // GEÄNDERT: von string zu UserDto | null
   teacher?: { firstName?: string; lastName?: string; userName?: string }
+  grades: number[]  // NEU: hinzugefügt (war in Zeile 76 verwendet)
 }
 
 interface CourseUserAssignmentDto {
@@ -181,7 +193,13 @@ function timeRange(b: BlockDto) {
 }
 
 function displayInstructor(c: CourseDto) {
-  if (c.instructor && c.instructor.trim().length) return c.instructor
+  // Zuerst prüfen, ob instructor (UserDto) gesetzt ist
+  if (c.instructor) {
+    const name = `${c.instructor.firstName ?? ''} ${c.instructor.lastName ?? ''}`.trim()
+    return name || c.instructor.userName || '—'
+  }
+
+  // Fallback auf teacher (falls noch vorhanden)
   const t = c.teacher
   if (!t) return '—'
   const name = `${t.firstName ?? ''} ${t.lastName ?? ''}`.trim()

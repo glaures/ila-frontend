@@ -23,7 +23,7 @@
         <div class="row">
           <div class="col-md-6">
             <p><strong>Kurs-ID:</strong> {{ course.courseId }}</p>
-            <p><strong>Dozent:</strong> {{ course.instructor || 'N/A' }}</p>
+            <p><strong>Dozent:</strong> {{ course.instructor ? `${course.instructor.firstName} ${course.instructor.lastName}` : 'N/A' }}</p>
             <p><strong>Raum:</strong> {{ course.room || 'N/A' }}</p>
           </div>
           <div class="col-md-6">
