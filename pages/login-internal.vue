@@ -16,6 +16,14 @@ const userStore = useUserStore()
 const username = ref('')
 const password = ref('')
 const isLoading = ref(false)
+const isResetLoading = ref(false)
+
+// Prüft, ob eine gültige E-Mail-Adresse eingegeben wurde
+const isValidEmail = computed(() => {
+  const email = username.value.trim()
+  // Einfache E-Mail-Validierung
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+})
 
 async function handleLogin() {
   if (isLoading.value) return
@@ -73,6 +81,34 @@ async function handleLogin() {
   }
 }
 
+async function handlePasswordReset() {
+  if (isResetLoading.value || !isValidEmail.value) return
+
+  isResetLoading.value = true
+
+  try {
+    await $fetch('/users/password-reset', {
+      method: 'POST',
+      baseURL: config.public.apiBase,
+      credentials: config.public.apiWithCredentials ? 'include' : 'omit',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        email: username.value.trim()
+      }
+    })
+
+    toastStore.success('Ein neues Passwort wurde an deine E-Mail-Adresse gesendet.')
+
+  } catch (err: any) {
+    console.error('Password reset error:', err)
+    errorStore.show(err?.data?.message ?? 'Das Zurücksetzen des Passworts ist fehlgeschlagen.')
+  } finally {
+    isResetLoading.value = false
+  }
+}
+
 // Enter-Taste im Formular
 function handleKeyPress(event: KeyboardEvent) {
   if (event.key === 'Enter') {
@@ -106,14 +142,14 @@ function handleKeyPress(event: KeyboardEvent) {
 
           <!-- Login-Formular -->
           <div class="mb-2">
-            <label for="username" class="form-label">Benutzername</label>
+            <label for="username" class="form-label">E-Mail-Adresse</label>
             <input
                 id="username"
                 v-model="username"
-                type="text"
+                type="email"
                 class="form-control"
-                placeholder="Benutzername eingeben"
-                :disabled="isLoading"
+                placeholder="E-Mail-Adresse eingeben"
+                :disabled="isLoading || isResetLoading"
                 autocomplete="username"
                 @keypress="handleKeyPress"
             />
@@ -127,7 +163,7 @@ function handleKeyPress(event: KeyboardEvent) {
                 type="password"
                 class="form-control"
                 placeholder="Passwort eingeben"
-                :disabled="isLoading"
+                :disabled="isLoading || isResetLoading"
                 autocomplete="current-password"
                 @keypress="handleKeyPress"
             />
@@ -137,7 +173,7 @@ function handleKeyPress(event: KeyboardEvent) {
           <button
               type="button"
               class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center"
-              :disabled="isLoading"
+              :disabled="isLoading || isResetLoading"
               @click="handleLogin"
           >
             <span v-if="!isLoading">Anmelden</span>
@@ -147,10 +183,29 @@ function handleKeyPress(event: KeyboardEvent) {
             </span>
           </button>
 
-          <div class="mt-2 text-center">
+          <!-- Passwort vergessen -->
+          <div class="mt-3 d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <small class="text-muted">
+              Passwort vergessen? E-Mail eingeben und neues anfordern:
+            </small>
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                :disabled="!isValidEmail || isLoading || isResetLoading"
+                @click="handlePasswordReset"
+            >
+              <span v-if="!isResetLoading">Neues Passwort</span>
+              <span v-else class="d-inline-flex align-items-center">
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Sende…
+              </span>
+            </button>
+          </div>
+
+          <div class="mt-3 text-center">
             <small class="text-muted">
               Probleme bei der Anmeldung? <br/>
-              Support Email an <a href="mailto:support@sandbox27.de" class="link-secondary">support@sandbox27.de</a>
+              Support Email an <a href="mailto:ila@jms-muenster.de" class="link-secondary">ila@jms-muenster.de</a>
               schreiben
             </small>
           </div>
@@ -176,8 +231,4 @@ function handleKeyPress(event: KeyboardEvent) {
 
 <style scoped>
 /* Optional: Focus-Styling für bessere Accessibility */
-.form-control:focus {
-  border-color: var(--bs-primary);
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
 </style>

@@ -22,36 +22,68 @@
       <li>
         <hr class="dropdown-divider"/>
       </li>
-      <li><a class="dropdown-item" href="#" @click.prevent="logout">Abmelden</a></li>
+
+      <!-- Rollenbasierte Menüeinträge -->
+      <li v-if="userStore.hasRole('ADMIN') || userStore.hasRole('SCHOOL_Admin')">
+        <NuxtLink class="dropdown-item" to="/admin">
+          <i class="bi bi-gear me-2"></i>Administration
+        </NuxtLink>
+      </li>
+      <li v-if="userStore.hasRole('COURSE_INSTRUCTOR')">
+        <NuxtLink class="dropdown-item" to="/instructor">
+          <i class="bi bi-journal-text me-2"></i>Meine Kurse
+        </NuxtLink>
+      </li>
+      <li v-if="userStore.hasRole('STUDENT')">
+        <NuxtLink class="dropdown-item" to="/preferences">
+          <i class="bi bi-star me-2"></i>Meine Präferenzen
+        </NuxtLink>
+      </li>
+
+      <li v-if="hasMultipleViews">
+        <hr class="dropdown-divider"/>
+      </li>
+
+      <li><a class="dropdown-item" href="#" @click.prevent="logout">
+        <i class="bi bi-box-arrow-right me-2"></i>Abmelden
+      </a></li>
     </ul>
   </div>
 </template>
 
 <script setup>
-import {ref, onMounted} from 'vue'
+import {ref, computed} from 'vue'
 import {useUserStore} from "~/stores/user.js";
+
 const userStore = useUserStore()
 
-// Hier evtl. dynamische Daten holen oder aus einem Store
 const displayName = computed(() => userStore.name)
+
+// Prüfen ob der Nutzer mehrere Views hat (für den Divider)
+const hasMultipleViews = computed(() => {
+  return userStore.hasRole('ADMIN') ||
+      userStore.hasRole('SCHOOL_Admin') ||
+      userStore.hasRole('COURSE_INSTRUCTOR') ||
+      userStore.hasRole('STUDENT')
+})
 
 // Platzhalter-Bild, später mit echtem Avatar ersetzen
 const avatarUrl = ref('/images/avatar_placeholder.png')
 
-// Optional: Laden von echten Daten via API oder Pinia Store
-onMounted(() => {
-  // z. B. echte Userdaten aus localStorage oder JWT lesen
-  // displayName.value = decodedJwt.fullName
-})
-
 function logout() {
   localStorage.removeItem('jwt')
+  userStore.clear()
   window.location.href = '/'
 }
 </script>
 
 <style scoped>
 .dropdown-toggle::after {
-  display: none; /* optional: Pfeil verbergen */
+  display: none;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
 }
 </style>
