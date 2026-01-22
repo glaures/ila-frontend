@@ -23,13 +23,13 @@
         <div class="row">
           <div class="col-md-6">
             <p><strong>Kurs-ID:</strong> {{ course.courseId }}</p>
-            <p><strong>Dozent:</strong> {{ course.instructor ? `${course.instructor.firstName} ${course.instructor.lastName}` : 'N/A' }}</p>
+            <p><strong>Kursleitung:</strong> {{ course.instructor ? `${course.instructor.firstName} ${course.instructor.lastName}` : 'N/A' }}</p>
             <p><strong>Raum:</strong> {{ course.room || 'N/A' }}</p>
           </div>
           <div class="col-md-6">
-            <p><strong>Min. Teilnehmer:</strong> {{ course.minAttendees }}</p>
-            <p><strong>Max. Teilnehmer:</strong> {{ course.maxAttendees }}</p>
-            <p><strong>Aktuelle Teilnehmer:</strong>
+            <p><strong>Min. Schüler:innen:</strong> {{ course.minAttendees }}</p>
+            <p><strong>Max. Schüler:innen:</strong> {{ course.maxAttendees }}</p>
+            <p><strong>Aktuelle Schüler:innen:</strong>
               <span :class="participantCountClass">{{ assignments.length }}</span>
             </p>
           </div>
@@ -43,16 +43,16 @@
       </div>
     </div>
 
-    <!-- Teilnehmerverwaltung -->
+    <!-- Schüler:innen-Verwaltung -->
     <div class="row">
-      <!-- Teilnehmerliste -->
+      <!-- Schüler:innen-Liste -->
       <div class="col-lg-7">
         <div class="card">
           <div class="card-header">
             <div class="d-flex align-items-center justify-content-between">
               <h5 class="mb-0">
                 <i class="bi bi-people me-2"></i>
-                Teilnehmer ({{ assignments.length }})
+                Schüler:innen ({{ assignments.length }})
               </h5>
               <button class="btn btn-sm btn-outline-secondary" @click="loadAssignments">
                 <i class="bi bi-arrow-clockwise"></i>
@@ -68,7 +68,7 @@
 
             <div v-else-if="assignments.length === 0" class="alert alert-info">
               <i class="bi bi-info-circle me-2"></i>
-              Dieser Kurs hat noch keine Teilnehmer.
+              Dieser Kurs hat noch keine Schüler:innen.
             </div>
 
             <div v-else class="table-responsive">
@@ -83,7 +83,7 @@
                 </thead>
                 <tbody>
                 <tr v-for="assignment in sortedAssignments" :key="assignment.id">
-                  <td>{{ assignment.userUserName }}<br><span class="text-muted small">Klasse {{assignment.grade}}</span></td>
+                  <td>{{ assignment.userUserName }}<br><span class="text-muted small">Klasse {{ assignment.grade }}</span></td>
                   <td>{{ assignment.firstName }}</td>
                   <td>{{ assignment.lastName }}</td>
                   <td class="text-end">
@@ -92,11 +92,81 @@
                         @click="confirmRemoveParticipant(assignment)"
                         :disabled="removing === assignment.id"
                     >
-                                                <span v-if="removing === assignment.id">
-                                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                                </span>
+                      <span v-if="removing === assignment.id">
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                      </span>
                       <i v-else class="bi bi-trash"></i>
                       Entfernen
+                    </button>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ausgeschlossene Schüler:innen -->
+        <div class="card mt-3">
+          <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between">
+              <h5 class="mb-0">
+                <i class="bi bi-person-x me-2"></i>
+                Ausgeschlossene Schüler:innen ({{ exclusions.length }})
+              </h5>
+              <button class="btn btn-sm btn-outline-secondary" @click="loadExclusions">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div v-if="loadingExclusions" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Lade...</span>
+              </div>
+            </div>
+
+            <div v-else-if="exclusions.length === 0" class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              Keine Schüler:innen von diesem Kurs ausgeschlossen.
+            </div>
+
+            <div v-else class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Klasse</th>
+                  <th>Grund</th>
+                  <th class="text-end">Aktionen</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="exclusion in sortedExclusions" :key="exclusion.id">
+                  <td>
+                    <strong>{{ exclusion.user.firstName }} {{ exclusion.user.lastName }}</strong>
+                    <br>
+                    <small class="text-muted">{{ exclusion.user.userName }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{ exclusion.user.grade }}</span>
+                  </td>
+                  <td>
+                    <span v-if="exclusion.reason" class="text-muted">{{ exclusion.reason }}</span>
+                    <span v-else class="text-muted fst-italic">—</span>
+                  </td>
+                  <td class="text-end">
+                    <button
+                        class="btn btn-sm btn-outline-success"
+                        @click="removeExclusion(exclusion)"
+                        :disabled="removingExclusion === exclusion.id"
+                        title="Ausschluss aufheben"
+                    >
+                      <span v-if="removingExclusion === exclusion.id">
+                        <span class="spinner-border spinner-border-sm"></span>
+                      </span>
+                      <i v-else class="bi bi-person-check"></i>
+                      Freigeben
                     </button>
                   </td>
                 </tr>
@@ -109,18 +179,18 @@
 
       <!-- Aktionen Sidebar -->
       <div class="col-lg-5">
-        <!-- Einzelnen Teilnehmer hinzufügen -->
+        <!-- Schüler:in hinzufügen -->
         <div class="card mb-3">
           <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-person-plus me-2"></i>
-              Teilnehmer hinzufügen
+              Schüler:in hinzufügen
             </h5>
           </div>
           <div class="card-body">
             <form @submit.prevent="addParticipant">
               <div class="mb-3">
-                <label for="userSearch" class="form-label">Teilnehmer suchen</label>
+                <label for="userSearch" class="form-label">Schüler:in suchen</label>
                 <div class="position-relative">
                   <input
                       type="text"
@@ -162,12 +232,12 @@
                   >
                     <div class="dropdown-item text-muted">
                       <i class="bi bi-search me-2"></i>
-                      Keine Benutzer gefunden
+                      Keine Schüler:innen gefunden
                     </div>
                   </div>
                 </div>
                 <div class="form-text">
-                  {{ loadingUsers ? 'Lade Benutzer...' : 'Suche nach Name oder Username' }}
+                  {{ loadingUsers ? 'Lade Schüler:innen...' : 'Suche nach Name oder Username' }}
                 </div>
               </div>
               <button
@@ -175,25 +245,117 @@
                   class="btn btn-primary w-100"
                   :disabled="adding || !newParticipant.userName || loadingUsers"
               >
-                                <span v-if="adding">
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                    Füge hinzu...
-                                </span>
+                <span v-if="adding">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Füge hinzu...
+                </span>
                 <span v-else>
-                                    <i class="bi bi-plus-circle me-2"></i>
-                                    Teilnehmer hinzufügen
-                                </span>
+                  <i class="bi bi-plus-circle me-2"></i>
+                  Schüler:in hinzufügen
+                </span>
               </button>
             </form>
           </div>
         </div>
 
-        <!-- Teilnehmer von anderem Kurs kopieren -->
+        <!-- Schüler:in ausschließen -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-person-x me-2"></i>
+              Schüler:in ausschließen
+            </h5>
+          </div>
+          <div class="card-body">
+            <form @submit.prevent="addExclusion">
+              <div class="mb-3">
+                <label for="exclusionSearch" class="form-label">Schüler:in suchen</label>
+                <div class="position-relative">
+                  <input
+                      type="text"
+                      class="form-control"
+                      id="exclusionSearch"
+                      v-model="newExclusion.searchQuery"
+                      @input="onExclusionSearchInput"
+                      @focus="onExclusionSearchInput"
+                      @blur="closeExclusionDropdown"
+                      placeholder="Name oder Username eingeben..."
+                      autocomplete="off"
+                      :disabled="loadingUsers"
+                  >
+                  <div
+                      v-if="newExclusion.showDropdown && filteredUsersForExclusion.length > 0"
+                      class="dropdown-menu show w-100 shadow"
+                      style="max-height: 300px; overflow-y: auto;"
+                  >
+                    <button
+                        v-for="user in filteredUsersForExclusion"
+                        :key="user.userName"
+                        type="button"
+                        class="dropdown-item"
+                        @click="selectUserForExclusion(user)"
+                    >
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                          <strong>{{ user.lastName }}, {{ user.firstName }}</strong>
+                          <br>
+                          <small class="text-muted">{{ user.userName }}</small>
+                        </div>
+                        <span class="badge bg-secondary">Klasse {{ user.grade }}</span>
+                      </div>
+                    </button>
+                  </div>
+                  <div
+                      v-if="newExclusion.showDropdown && newExclusion.searchQuery && filteredUsersForExclusion.length === 0"
+                      class="dropdown-menu show w-100"
+                  >
+                    <div class="dropdown-item text-muted">
+                      <i class="bi bi-search me-2"></i>
+                      Keine Schüler:innen gefunden
+                    </div>
+                  </div>
+                </div>
+                <div class="form-text">
+                  Suche nach Schüler:innen, die von diesem Kurs ausgeschlossen werden sollen
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="exclusionReason" class="form-label">Grund (optional)</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="exclusionReason"
+                    v-model="newExclusion.reason"
+                    placeholder="z.B. Konflikt mit anderem Kurs"
+                >
+              </div>
+              <button
+                  type="submit"
+                  class="btn btn-warning w-100"
+                  :disabled="addingExclusion || !newExclusion.userName || loadingUsers"
+              >
+                <span v-if="addingExclusion">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Schließe aus...
+                </span>
+                <span v-else>
+                  <i class="bi bi-person-x me-2"></i>
+                  Schüler:in ausschließen
+                </span>
+              </button>
+              <div class="form-text mt-2">
+                Ausgeschlossene Schüler:innen können diesem Kurs nicht zugewiesen werden.
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Schüler:innen von anderem Kurs kopieren -->
         <div class="card">
           <div class="card-header">
             <h5 class="mb-0">
               <i class="bi bi-copy me-2"></i>
-              Teilnehmer kopieren
+              Schüler:innen kopieren
             </h5>
           </div>
           <div class="card-body">
@@ -236,20 +398,21 @@
 
               <button
                   type="submit"
-                  class="btn btn-warning w-100"
+                  class="btn btn-secondary w-100"
                   :disabled="copying || !copyForm.selectedCourseId"
               >
-                                <span v-if="copying">
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                    Kopiere...
-                                </span>
+                <span v-if="copying">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Kopiere...
+                </span>
                 <span v-else>
-                                    <i class="bi bi-clipboard-check me-2"></i>
-                                    Teilnehmer kopieren
-                                </span>
+                  <i class="bi bi-clipboard-check me-2"></i>
+                  Schüler:innen kopieren
+                </span>
               </button>
               <div class="form-text mt-2">
-                Alle Teilnehmer des gewählten Kurses werden zu diesem Kurs hinzugefügt.
+                Alle Schüler:innen des gewählten Kurses werden zu diesem Kurs hinzugefügt.
+                Ausgeschlossene Schüler:innen werden übersprungen.
               </div>
             </form>
           </div>
@@ -257,7 +420,7 @@
       </div>
     </div>
 
-    <!-- Bestätigungsdialog -->
+    <!-- Bestätigungsdialog für Entfernen -->
     <div
         class="modal fade"
         id="confirmDeleteModal"
@@ -267,7 +430,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Teilnehmer entfernen</h5>
+            <h5 class="modal-title">Schüler:in entfernen</h5>
             <button
                 type="button"
                 class="btn-close"
@@ -275,7 +438,7 @@
             ></button>
           </div>
           <div class="modal-body">
-            <p>Möchtest du wirklich folgenden Teilnehmer aus dem Kurs entfernen?</p>
+            <p>Möchtest du wirklich folgende:n Schüler:in aus dem Kurs entfernen?</p>
             <div v-if="participantToRemove" class="alert alert-warning">
               <strong>{{ participantToRemove.firstName }} {{ participantToRemove.lastName }}</strong>
               <br>
@@ -321,7 +484,11 @@ interface CourseDto {
   courseId: string
   name: string
   description?: string
-  instructor?: string
+  instructor?: {
+    userName: string
+    firstName: string
+    lastName: string
+  }
   room?: string
   minAttendees: number
   maxAttendees: number
@@ -334,6 +501,7 @@ interface CourseUserAssignmentDto {
   userUserName: string
   firstName: string
   lastName: string
+  grade: number
 }
 
 interface PeriodDto {
@@ -355,6 +523,17 @@ interface UserDto {
   lastName: string
   grade: number
   gender: string
+  roles: string[]
+}
+
+interface CourseExclusionDto {
+  id: number
+  courseId: number
+  courseName: string
+  user: UserDto
+  reason: string | null
+  createdBy: UserDto | null
+  createdAt: string
 }
 
 // Stores
@@ -367,6 +546,7 @@ const { $authFetch } = useNuxtApp()
 const courseId = ref<string>(route.params.id as string)
 const course = ref<CourseDto | null>(null)
 const assignments = ref<CourseUserAssignmentDto[]>([])
+const exclusions = ref<CourseExclusionDto[]>([])
 const periods = ref<PeriodDto[]>([])
 const availableCourses = ref<CourseDto[]>([])
 const users = ref<UserDto[]>([])
@@ -377,10 +557,20 @@ const removing = ref<number | null>(null)
 const copying = ref(false)
 const loadingCourses = ref(false)
 const loadingUsers = ref(false)
+const loadingExclusions = ref(false)
+const addingExclusion = ref(false)
+const removingExclusion = ref<number | null>(null)
 
 const newParticipant = ref({
   userName: '',
   searchQuery: '',
+  showDropdown: false
+})
+
+const newExclusion = ref({
+  userName: '',
+  searchQuery: '',
+  reason: '',
   showDropdown: false
 })
 
@@ -402,6 +592,14 @@ const sortedAssignments = computed(() => {
   })
 })
 
+const sortedExclusions = computed(() => {
+  return [...exclusions.value].sort((a, b) => {
+    const nameA = `${a.user.lastName} ${a.user.firstName}`.toLowerCase()
+    const nameB = `${b.user.lastName} ${b.user.firstName}`.toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+})
+
 const participantCountClass = computed(() => {
   if (!course.value) return ''
   const count = assignments.value.length
@@ -414,17 +612,43 @@ const filteredUsers = computed(() => {
   const query = newParticipant.value.searchQuery.toLowerCase().trim()
   if (!query) return []
 
-  // Filtere Nutzer, die bereits Teilnehmer sind
+  // Filtere Nutzer, die bereits zugewiesen oder ausgeschlossen sind
   const assignedUserNames = new Set(assignments.value.map(a => a.userUserName))
+  const excludedUserNames = new Set(exclusions.value.map(e => e.user.userName))
 
   return users.value
+      .filter(user => user.roles.includes('STUDENT'))
       .filter(user => !assignedUserNames.has(user.userName))
+      .filter(user => !excludedUserNames.has(user.userName))
       .filter(user => {
         const fullName = `${user.firstName} ${user.lastName}`.toLowerCase()
         const userName = user.userName.toLowerCase()
         return fullName.includes(query) || userName.includes(query)
       })
-      .slice(0, 10) // Limitiere auf 10 Ergebnisse
+      .slice(0, 10)
+      .sort((a, b) => {
+        const nameA = `${a.lastName} ${a.firstName}`.toLowerCase()
+        const nameB = `${b.lastName} ${b.firstName}`.toLowerCase()
+        return nameA.localeCompare(nameB)
+      })
+})
+
+const filteredUsersForExclusion = computed(() => {
+  const query = newExclusion.value.searchQuery.toLowerCase().trim()
+  if (!query) return []
+
+  // Filtere Nutzer, die bereits ausgeschlossen sind
+  const excludedUserNames = new Set(exclusions.value.map(e => e.user.userName))
+
+  return users.value
+      .filter(user => user.roles.includes('STUDENT'))
+      .filter(user => !excludedUserNames.has(user.userName))
+      .filter(user => {
+        const fullName = `${user.firstName} ${user.lastName}`.toLowerCase()
+        const userName = user.userName.toLowerCase()
+        return fullName.includes(query) || userName.includes(query)
+      })
+      .slice(0, 10)
       .sort((a, b) => {
         const nameA = `${a.lastName} ${a.firstName}`.toLowerCase()
         const nameB = `${b.lastName} ${b.firstName}`.toLowerCase()
@@ -446,9 +670,20 @@ async function loadAssignments() {
   try {
     assignments.value = await $authFetch(`/assignments?course-id=${courseId.value}`)
   } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Teilnehmer: ' + err)
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Schüler:innen: ' + err)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadExclusions() {
+  loadingExclusions.value = true
+  try {
+    exclusions.value = await $authFetch(`/course-exclusions/by-course/${courseId.value}`)
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Ausschlüsse: ' + err)
+  } finally {
+    loadingExclusions.value = false
   }
 }
 
@@ -477,14 +712,31 @@ function selectUser(user: UserDto) {
   newParticipant.value.showDropdown = false
 }
 
+function selectUserForExclusion(user: UserDto) {
+  newExclusion.value.userName = user.userName
+  newExclusion.value.searchQuery = `${user.lastName}, ${user.firstName} (${user.userName})`
+  newExclusion.value.showDropdown = false
+}
+
 function onSearchInput() {
   newParticipant.value.showDropdown = newParticipant.value.searchQuery.length > 0
   newParticipant.value.userName = ''
 }
 
+function onExclusionSearchInput() {
+  newExclusion.value.showDropdown = newExclusion.value.searchQuery.length > 0
+  newExclusion.value.userName = ''
+}
+
 function closeDropdown() {
   setTimeout(() => {
     newParticipant.value.showDropdown = false
+  }, 200)
+}
+
+function closeExclusionDropdown() {
+  setTimeout(() => {
+    newExclusion.value.showDropdown = false
   }, 200)
 }
 
@@ -534,16 +786,56 @@ async function addParticipant() {
         feedback.info.forEach(info => toastStore.info(info))
       }
 
-      toastStore.success(`Teilnehmer ${newParticipant.value.userName} wurde hinzugefügt`)
+      toastStore.success(`Schüler:in ${newParticipant.value.userName} wurde hinzugefügt`)
       newParticipant.value.userName = ''
       newParticipant.value.searchQuery = ''
       newParticipant.value.showDropdown = false
       await loadAssignments()
     }
   } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Fehler beim Hinzufügen des Teilnehmers: ' + err)
+    errorStore.show(err?.data?.message ?? 'Fehler beim Hinzufügen: ' + err)
   } finally {
     adding.value = false
+  }
+}
+
+async function addExclusion() {
+  if (!newExclusion.value.userName) return
+
+  addingExclusion.value = true
+  try {
+    await $authFetch('/course-exclusions', {
+      method: 'POST',
+      body: {
+        courseId: parseInt(courseId.value),
+        userName: newExclusion.value.userName,
+        reason: newExclusion.value.reason.trim() || null
+      }
+    })
+
+    toastStore.success(`Schüler:in ${newExclusion.value.userName} wurde ausgeschlossen`)
+    newExclusion.value.userName = ''
+    newExclusion.value.searchQuery = ''
+    newExclusion.value.reason = ''
+    newExclusion.value.showDropdown = false
+    await loadExclusions()
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Ausschließen: ' + err)
+  } finally {
+    addingExclusion.value = false
+  }
+}
+
+async function removeExclusion(exclusion: CourseExclusionDto) {
+  removingExclusion.value = exclusion.id
+  try {
+    await $authFetch(`/course-exclusions/${exclusion.id}`, { method: 'DELETE' })
+    toastStore.success(`Ausschluss für ${exclusion.user.firstName} ${exclusion.user.lastName} wurde aufgehoben`)
+    await loadExclusions()
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Aufheben des Ausschlusses: ' + err)
+  } finally {
+    removingExclusion.value = null
   }
 }
 
@@ -565,7 +857,7 @@ async function removeParticipant() {
       method: 'DELETE'
     })
 
-    toastStore.success('Teilnehmer wurde entfernt')
+    toastStore.success('Schüler:in wurde entfernt')
 
     // Modal schließen
     if (deleteModalInstance) {
@@ -574,7 +866,7 @@ async function removeParticipant() {
 
     await loadAssignments()
   } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Fehler beim Entfernen des Teilnehmers: ' + err)
+    errorStore.show(err?.data?.message ?? 'Fehler beim Entfernen: ' + err)
   } finally {
     removing.value = null
     participantToRemove.value = null
@@ -607,14 +899,14 @@ async function copyParticipants() {
     }
 
     if (!feedback.errors || feedback.errors.length === 0) {
-      toastStore.success('Teilnehmer wurden erfolgreich kopiert')
+      toastStore.success('Schüler:innen wurden erfolgreich kopiert')
       copyForm.value.selectedPeriodId = ''
       copyForm.value.selectedCourseId = ''
       availableCourses.value = []
       await loadAssignments()
     }
   } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Fehler beim Kopieren der Teilnehmer: ' + err)
+    errorStore.show(err?.data?.message ?? 'Fehler beim Kopieren: ' + err)
   } finally {
     copying.value = false
   }
@@ -632,6 +924,7 @@ onMounted(async () => {
   await Promise.all([
     loadCourse(),
     loadAssignments(),
+    loadExclusions(),
     loadPeriods(),
     loadUsers()
   ])

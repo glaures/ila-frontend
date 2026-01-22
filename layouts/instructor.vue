@@ -1,16 +1,7 @@
 <template>
   <div class="instructor-layout">
     <!-- Header -->
-    <header class="instructor-header">
-      <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center py-3">
-          <h1 class="h5 mb-0">ILA Kursleiter</h1>
-          <button class="btn btn-sm btn-outline-light" @click="handleLogout">
-            <i class="bi bi-box-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-    </header>
+    <Header/>
 
     <!-- Navigation Tabs -->
     <nav class="instructor-nav">
