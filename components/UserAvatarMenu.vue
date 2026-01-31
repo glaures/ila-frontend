@@ -34,9 +34,16 @@
           <i class="bi bi-journal-text me-2"></i>Meine Kurse
         </NuxtLink>
       </li>
+
+      <!-- Studenten-spezifische Menüeinträge -->
       <li v-if="userStore.hasRole('STUDENT')">
         <NuxtLink class="dropdown-item" to="/preferences">
           <i class="bi bi-star me-2"></i>Meine Präferenzen
+        </NuxtLink>
+      </li>
+      <li v-if="userStore.hasRole('STUDENT')">
+        <NuxtLink class="dropdown-item" to="/wechselrunde">
+          <i class="bi bi-arrow-left-right me-2"></i>Wechselrunde
         </NuxtLink>
       </li>
 
@@ -52,8 +59,8 @@
 </template>
 
 <script setup>
-import {ref, computed} from 'vue'
-import {useUserStore} from "~/stores/user.js";
+import { ref, computed } from 'vue'
+import { useUserStore } from "~/stores/user.js"
 
 const userStore = useUserStore()
 

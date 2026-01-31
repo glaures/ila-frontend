@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePeriodContextStore } from '~/stores/periodContext'
-import {computed, watch} from "vue";
+import { computed, watch } from "vue"
+import { weekdayLabels } from '~/utils/weekdays'
 
 type Problem = {
   description: string
@@ -13,7 +14,7 @@ const periodStore = usePeriodContextStore()
 const periodId = computed(() => periodStore.selectedId)
 
 definePageMeta({
-  layout: 'admin' // dein Admin-Layout
+  layout: 'admin'
 })
 
 const problems = ref<Problem[]>([])
@@ -21,21 +22,35 @@ const loading = ref(true)
 
 const typeLabel: Record<string, string> = {
   notEnoughCourses: 'nicht genügend Kurse',
+  moreThan1AtTheSameDayOfWeek: 'mehrere Kurse am selben Tag'
 }
 
 function resolveFixRoute(p: Problem): string | null {
   switch (p.type) {
     case 'notEnoughCourses':
       return `/admin/users/${encodeURIComponent(p.id)}`
+    case 'moreThan1AtTheSameDayOfWeek':
+      return `/admin/user-assignments/${encodeURIComponent(p.id)}`
     default:
       return null
   }
 }
 
+function formatDescription(p: Problem): string {
+  if (p.type === 'moreThan1AtTheSameDayOfWeek') {
+    // Ersetze englische Wochentage durch deutsche
+    let desc = p.description
+    for (const [eng, de] of Object.entries(weekdayLabels)) {
+      desc = desc.replace(eng, de)
+    }
+    return desc
+  }
+  return p.description
+}
+
 const hasProblems = computed(() => problems.value.length > 0)
 
 async function loadProblems() {
-  // Nur laden, wenn eine gültige Period-ID vorhanden ist
   if (!periodId.value) {
     loading.value = false
     return
@@ -44,19 +59,17 @@ async function loadProblems() {
   loading.value = true
   try {
     const data = await $authFetch(`/problems?period-id=${periodId.value}`)
-    // Absicherung gegen „komische" Antworten
     problems.value = Array.isArray(data) ? data as Problem[] : []
   } finally {
     loading.value = false
   }
 }
 
-// Watch auf periodId - lädt Probleme, wenn sich die Period ändert
 watch(periodId, (newPeriodId) => {
   if (newPeriodId) {
     loadProblems()
   }
-}, { immediate: true }) // immediate: true führt den Watch sofort aus, falls bereits eine Period vorhanden ist
+}, { immediate: true })
 </script>
 
 <template>
@@ -87,13 +100,13 @@ watch(periodId, (newPeriodId) => {
         >
           <div class="flex-fill">
             <div class="fw-semibold">
-              {{ p.description }}
+              {{ formatDescription(p) }}
             </div>
             <div class="small text-muted mt-1">
               <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">
                 {{ typeLabel[p.type] ?? p.type }}
               </span>
-              <span class="ms-2">Problem-ID: <code>{{ p.id }}</code></span>
+              <span class="ms-2">Schüler:in: <code>{{ p.id }}</code></span>
             </div>
           </div>
 
@@ -121,7 +134,6 @@ watch(periodId, (newPeriodId) => {
 </template>
 
 <style scoped>
-/* kleine optische Hilfe auf mobilen Geräten */
 .list-group-item { border-left: 0; border-right: 0; }
 .card { border: 0; }
 </style>

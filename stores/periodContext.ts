@@ -6,6 +6,10 @@ export interface PeriodDto {
     startDate: string // "dd.MM.yyyy"
     endDate: string   // "dd.MM.yyyy"
     current?: boolean
+    // Wechselphase-Felder
+    exchangePhaseStart?: string | null  // "dd.MM.yyyy HH:mm"
+    exchangePhaseEnd?: string | null    // "dd.MM.yyyy HH:mm"
+    exchangePhaseActive?: boolean
 }
 
 const LS_KEY = 'admin.periodId'

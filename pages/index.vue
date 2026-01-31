@@ -76,7 +76,7 @@ const errorStore = useErrorStore()
           <div class="mt-3">
             <small class="text-muted">
               Probleme bei der Anmeldung? <br/>
-              Support Email an <a href="mailto:admin@johanna-moosdorf-schule.de" class="link-secondary">admin@johanna-moosdorf-schule.de</a>
+              Support Email an <a href="mailto:admin@sandbox27.de" class="link-secondary">admin@sandbox27.de</a>
               schreiben
             </small>
           </div>

@@ -50,6 +50,7 @@ const menuGroups = [
       { to: '/admin/users', label: 'Manuelle Anpassungen', icon: 'bi bi-person-lines-fill' },
       { to: '/admin/problems', label: 'Belegungsprobleme', icon: 'bi bi-exclamation-diamond' },
       { to: '/admin/belegungen', label: 'Belegungsüberblick', icon: 'bi bi-printer' },
+      { to: '/admin/wechselrunde', label: 'Wechselrunde', icon: 'bi bi-arrow-left-right' },
     ]
   },
   {
