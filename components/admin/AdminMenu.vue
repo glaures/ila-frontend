@@ -57,7 +57,7 @@ const menuGroups = [
     header: 'Extras',
     items: [
       { to: '/admin/nutzerverwaltung', label: 'Externe Nutzer', icon: 'bi bi-person-fill-lock' },
-      { to: '/admin/beste-schule-import', label: 'Import Beste Schule', icon: 'bi bi-arrow-up-right-square' },
+      { to: '/admin/beste-schule-abwesenheiten', label: 'Beste Schule Abwesenheiten', icon: 'bi bi-arrow-up-right-square' },
     ]
   }
 ]
