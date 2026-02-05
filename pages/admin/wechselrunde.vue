@@ -124,6 +124,22 @@ const resolveExchanges = async () => {
   }
 }
 
+const deleteRequest = async (requestId: number, studentName: string) => {
+  if (!confirm(`Möchtest du den Wechselwunsch von ${studentName} wirklich löschen?`)) {
+    return
+  }
+
+  try {
+    await $authFetch(`/exchange/admin/${requestId}`, {
+      method: 'DELETE'
+    })
+    toastStore.success('Wechselwunsch wurde gelöscht')
+    await loadData()
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Löschen des Wechselwunsches')
+  }
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return '—'
   return new Date(dateString).toLocaleString('de-DE', {
@@ -317,6 +333,7 @@ watch(() => periodContext.selectedPeriod?.id, () => {
                 <th>Status</th>
                 <th>Erstellt</th>
                 <th>Ergebnis</th>
+                <th>Aktionen</th>
               </tr>
               </thead>
               <tbody>
@@ -355,9 +372,18 @@ watch(() => periodContext.selectedPeriod?.id, () => {
                     </span>
                   <span v-else class="text-muted">—</span>
                 </td>
+                <td>
+                  <button
+                      v-if="request.status === 'PENDING'"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteRequest(request.id, request.studentName)"
+                      title="Wechselwunsch löschen">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
               </tr>
               <tr v-if="filteredRequests.length === 0">
-                <td colspan="6" class="text-center text-muted py-4">
+                <td colspan="7" class="text-center text-muted py-4">
                   Keine Wechselwünsche vorhanden
                 </td>
               </tr>

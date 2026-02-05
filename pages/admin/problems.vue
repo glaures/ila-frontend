@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePeriodContextStore } from '~/stores/periodContext'
-import { computed, watch } from "vue"
+import { computed, watch, ref } from "vue"
 import { weekdayLabels } from '~/utils/weekdays'
 
 type Problem = {
@@ -19,11 +19,41 @@ definePageMeta({
 
 const problems = ref<Problem[]>([])
 const loading = ref(true)
+const selectedType = ref<string>('all')
 
 const typeLabel: Record<string, string> = {
   notEnoughCourses: 'nicht genügend Kurse',
   moreThan1AtTheSameDayOfWeek: 'mehrere Kurse am selben Tag'
 }
+
+// Gruppiere Probleme nach Typ
+const problemsByType = computed(() => {
+  const grouped: Record<string, Problem[]> = {}
+  problems.value.forEach(p => {
+    if (!grouped[p.type]) {
+      grouped[p.type] = []
+    }
+    grouped[p.type].push(p)
+  })
+  return grouped
+})
+
+// Liste der verfügbaren Typen mit Anzahl
+const availableTypes = computed(() => {
+  return Object.keys(problemsByType.value).map(type => ({
+    value: type,
+    label: typeLabel[type] ?? type,
+    count: problemsByType.value[type].length
+  })).sort((a, b) => a.label.localeCompare(b.label))
+})
+
+// Gefilterte Probleme basierend auf Auswahl
+const filteredProblems = computed(() => {
+  if (selectedType.value === 'all') {
+    return problems.value
+  }
+  return problemsByType.value[selectedType.value] ?? []
+})
 
 function resolveFixRoute(p: Problem): string | null {
   switch (p.type) {
@@ -60,6 +90,10 @@ async function loadProblems() {
   try {
     const data = await $authFetch(`/problems?period-id=${periodId.value}`)
     problems.value = Array.isArray(data) ? data as Problem[] : []
+    // Wenn der aktuell ausgewählte Typ nicht mehr existiert, auf "all" zurücksetzen
+    if (selectedType.value !== 'all' && !problemsByType.value[selectedType.value]) {
+      selectedType.value = 'all'
+    }
   } finally {
     loading.value = false
   }
@@ -91,41 +125,73 @@ watch(periodId, (newPeriodId) => {
       Aktuell sind keine Probleme vorhanden.
     </div>
 
-    <div v-else class="card">
-      <div class="list-group list-group-flush">
-        <div
-            v-for="p in problems"
-            :key="p.id + ':' + p.type + ':' + p.description"
-            class="list-group-item d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2"
-        >
-          <div class="flex-fill">
-            <div class="fw-semibold">
-              {{ formatDescription(p) }}
-            </div>
-            <div class="small text-muted mt-1">
-              <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">
-                {{ typeLabel[p.type] ?? p.type }}
-              </span>
-              <span class="ms-2">Schüler:in: <code>{{ p.id }}</code></span>
-            </div>
-          </div>
+    <div v-else>
+      <!-- Auswahl der Problemart -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <label for="typeFilter" class="form-label fw-semibold">Problemart filtern:</label>
+          <select
+              id="typeFilter"
+              v-model="selectedType"
+              class="form-select"
+          >
+            <option value="all">
+              Alle Probleme ({{ problems.length }})
+            </option>
+            <option
+                v-for="type in availableTypes"
+                :key="type.value"
+                :value="type.value"
+            >
+              {{ type.label }} ({{ type.count }})
+            </option>
+          </select>
+        </div>
+      </div>
 
-          <div class="ms-md-3">
-            <NuxtLink
-                v-if="resolveFixRoute(p)"
-                :to="resolveFixRoute(p)!"
-                class="btn btn-primary btn-sm"
-            >
-              Beheben
-            </NuxtLink>
-            <button
-                v-else
-                class="btn btn-outline-secondary btn-sm"
-                disabled
-                title="Für diesen Problemtyp ist noch keine Aktion hinterlegt."
-            >
-              Keine Aktion verfügbar
-            </button>
+      <!-- Problemliste -->
+      <div class="card">
+        <div class="card-header bg-light">
+          <span class="fw-semibold">
+            {{ selectedType === 'all' ? 'Alle Probleme' : (typeLabel[selectedType] ?? selectedType) }}
+          </span>
+          <span class="badge bg-secondary ms-2">{{ filteredProblems.length }}</span>
+        </div>
+        <div class="list-group list-group-flush">
+          <div
+              v-for="p in filteredProblems"
+              :key="p.id + ':' + p.type + ':' + p.description"
+              class="list-group-item d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2"
+          >
+            <div class="flex-fill">
+              <div class="fw-semibold">
+                {{ formatDescription(p) }}
+              </div>
+              <div class="small text-muted mt-1">
+                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">
+                  {{ typeLabel[p.type] ?? p.type }}
+                </span>
+                <span class="ms-2">Schüler:in: <code>{{ p.id }}</code></span>
+              </div>
+            </div>
+
+            <div class="ms-md-3">
+              <NuxtLink
+                  v-if="resolveFixRoute(p)"
+                  :to="resolveFixRoute(p)!"
+                  class="btn btn-primary btn-sm"
+              >
+                Beheben
+              </NuxtLink>
+              <button
+                  v-else
+                  class="btn btn-outline-secondary btn-sm"
+                  disabled
+                  title="Für diesen Problemtyp ist noch keine Aktion hinterlegt."
+              >
+                Keine Aktion verfügbar
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -136,4 +202,5 @@ watch(periodId, (newPeriodId) => {
 <style scoped>
 .list-group-item { border-left: 0; border-right: 0; }
 .card { border: 0; }
+.card-header { border: 0; }
 </style>
