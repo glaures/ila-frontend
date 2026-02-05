@@ -1,0 +1,1 @@
+import{c as t,o,b as e,a as n,aL as r,F as _}from"./BKi6meoC.js";import{_ as c}from"./9ZTxNhen.js";import"./DG2TWOV7.js";import"./Ku7vOgQJ.js";import"./B01vE6-b.js";const x={__name:"default",setup(m){return(s,p)=>{const a=r;return o(),t(_,null,[e(c),n("main",null,[e(a)])],64)}}};export{x as default};
