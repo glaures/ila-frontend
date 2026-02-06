@@ -1,1 +1,0 @@
-import{e as s,c as t,o as r,t as n,h as o}from"./BxrBOXLL.js";const a=3,c=0,i=8,e={major:a,minor:c,build:i},u=s({__name:"Version",setup(m){return(p,_)=>(r(),t("span",null,"v"+n(o(e).major)+"."+n(o(e).minor)+"."+n(o(e).build),1))}});export{u as _};
