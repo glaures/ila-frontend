@@ -18,7 +18,7 @@
               :key="course.id"
               :value="course"
           >
-            {{ course.name }}<template v-if="course.block"> - {{ formatBlock(course.block) }}</template>
+            {{ course.name }}<template v-if="course.block"> - {{ formatBlock(course.block) }} - {{course.room}}</template>
           </option>
         </select>
       </div>
@@ -282,6 +282,7 @@ const errorStore = useErrorStore()
 interface Course {
   id: number
   name: string
+  room: string
   block: {
     id: number
     dayOfWeek: string

@@ -42,7 +42,7 @@
         </NuxtLink>
       </li>
       <li v-if="userStore.hasRole('STUDENT')">
-        <NuxtLink class="dropdown-item" to="/wechselrunde">
+        <NuxtLink class="dropdown-item" to="/wechselwunsch">
           <i class="bi bi-arrow-left-right me-2"></i>Wechselrunde
         </NuxtLink>
       </li>

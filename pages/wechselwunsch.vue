@@ -8,11 +8,11 @@
           <p class="text-muted mb-0" v-if="exchangePhaseInfo">
             <span v-if="exchangePhaseInfo.active" class="text-success">
               <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>
-              Wechselphase aktiv bis {{ formatDate(exchangePhaseInfo.end) }}
+              Wechselphase aktiv bis {{exchangePhaseInfo.end}}
             </span>
             <span v-else-if="exchangePhaseInfo.upcoming" class="text-warning">
               <i class="bi bi-clock me-1"></i>
-              Startet am {{ formatDate(exchangePhaseInfo.start) }}
+              Startet am {{ exchangePhaseInfo.start }}
             </span>
             <span v-else class="text-secondary">
               <i class="bi bi-x-circle me-1"></i>
@@ -300,6 +300,7 @@ import { Modal } from 'bootstrap'
 import { usePeriodContextStore } from '~/stores/periodContext'
 import { useToastStore } from '~/stores/toast'
 import { useErrorStore } from '~/stores/error'
+import { weekdayLabels } from '~/utils/weekdays'
 
 const { $authFetch } = useNuxtApp()
 const periodContextStore = usePeriodContextStore()
@@ -615,25 +616,8 @@ const submitExchangeRequest = async () => {
   }
 }
 
-// Helpers
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString('de-DE', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  })
-}
-
 const translateDayOfWeek = (dayOfWeek: string) => {
-  const days: Record<string, string> = {
-    MONDAY: 'Montag',
-    TUESDAY: 'Dienstag',
-    WEDNESDAY: 'Mittwoch',
-    THURSDAY: 'Donnerstag',
-    FRIDAY: 'Freitag',
-    SATURDAY: 'Samstag',
-    SUNDAY: 'Sonntag'
-  }
-  return days[dayOfWeek] || dayOfWeek
+  return weekdayLabels[dayOfWeek] || dayOfWeek
 }
 
 const getDayBadgeClass = (dayOfWeek: string) => {

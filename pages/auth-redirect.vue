@@ -58,7 +58,7 @@ async function redirectStudent(apiBase: string, token: string) {
       ) as { active?: boolean }
 
       if (exchangePhase?.active) {
-        await navigateTo('/wechselrunde')
+        await navigateTo('/wechselwunsch')
         return
       }
     }
