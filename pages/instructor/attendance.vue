@@ -2,6 +2,28 @@
   <div class="instructor-attendance">
     <h2 class="h5 mb-3">Anwesenheiten erfassen</h2>
 
+    <!-- Schritt 0: Phasenauswahl -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <label class="form-label fw-bold">Phase auswählen:</label>
+        <select
+            v-model="selectedPeriodId"
+            class="form-select form-select-lg"
+            @change="onPeriodChange"
+            :disabled="loadingPeriods || loadingCourses"
+        >
+          <option :value="null" disabled>Bitte Phase wählen...</option>
+          <option
+              v-for="period in periods"
+              :key="period.id"
+              :value="period.id"
+          >
+            {{ period.name }}<span v-if="period.current"> (aktuell)</span>
+          </option>
+        </select>
+      </div>
+    </div>
+
     <!-- Schritt 1: Kursauswahl -->
     <div class="card mb-3">
       <div class="card-body">
@@ -10,7 +32,7 @@
             v-model="selectedCourse"
             class="form-select form-select-lg"
             @change="onCourseChange"
-            :disabled="loadingCourses"
+            :disabled="loadingCourses || !selectedPeriodId"
         >
           <option :value="null">Bitte Kurs wählen...</option>
           <option
@@ -279,6 +301,12 @@ const toastStore = useToastStore()
 const errorStore = useErrorStore()
 
 // Interfaces
+interface Period {
+  id: number
+  name: string
+  current: boolean
+}
+
 interface Course {
   id: number
   name: string
@@ -312,6 +340,8 @@ interface AttendanceEntry {
 }
 
 // State
+const periods = ref<Period[]>([])
+const selectedPeriodId = ref<number | null>(null)
 const instructorCourses = ref<Course[]>([])
 const selectedCourse = ref<Course | null>(null)
 const sessions = ref<AttendanceSession[]>([])
@@ -321,6 +351,7 @@ const newSessionDate = ref('')
 const isDirty = ref(false)
 
 // Loading States
+const loadingPeriods = ref(false)
 const loadingCourses = ref(false)
 const loadingSessions = ref(false)
 const loadingEntries = ref(false)
@@ -356,19 +387,61 @@ onMounted(async () => {
     deleteModalInstance = new Modal(deleteModal.value)
   }
 
-  await loadCourses()
+  await loadPeriods()
+  if (selectedPeriodId.value) {
+    await loadCourses()
+  }
 })
 
 // Methods
+async function loadPeriods() {
+  try {
+    loadingPeriods.value = true
+    periods.value = await $authFetch('/periods')
+
+    // Default: aktuelle Phase vorauswählen, sonst erste Phase
+    const current = periods.value.find(p => p.current)
+    if (current) {
+      selectedPeriodId.value = current.id
+    } else if (periods.value.length > 0) {
+      selectedPeriodId.value = periods.value[0].id
+    }
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Phasen')
+  } finally {
+    loadingPeriods.value = false
+  }
+}
+
+async function onPeriodChange() {
+  // Abhängigen State zurücksetzen
+  selectedCourse.value = null
+  selectedSession.value = null
+  sessions.value = []
+  entries.value = []
+  isDirty.value = false
+  instructorCourses.value = []
+
+  if (selectedPeriodId.value) {
+    await loadCourses()
+  }
+}
+
 async function loadCourses() {
+  if (!selectedPeriodId.value) return
+
   try {
     loadingCourses.value = true
-    instructorCourses.value = await $authFetch('/courses/instructedbyme')
+    instructorCourses.value = await $authFetch(
+        `/courses/instructedbyme?period-id=${selectedPeriodId.value}`
+    )
 
     // Automatisch auswählen wenn nur ein Kurs
     if (instructorCourses.value.length === 1) {
       selectedCourse.value = instructorCourses.value[0]
       await loadSessions()
+    } else {
+      selectedCourse.value = null
     }
   } catch (err: any) {
     errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Kurse')
