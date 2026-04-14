@@ -2,6 +2,28 @@
   <div class="instructor-assignments">
     <h2 class="h5 mb-3">Manuelle Kurszuweisungen</h2>
 
+    <!-- Phasenauswahl -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <label class="form-label fw-bold">Phase auswählen:</label>
+        <select
+            v-model="selectedPeriodId"
+            class="form-select form-select-lg"
+            @change="onPeriodChange"
+            :disabled="loadingPeriods || loading"
+        >
+          <option :value="null" disabled>Bitte Phase wählen...</option>
+          <option
+              v-for="period in periods"
+              :key="period.id"
+              :value="period.id"
+          >
+            {{ period.name }}<span v-if="period.current"> (aktuell)</span>
+          </option>
+        </select>
+      </div>
+    </div>
+
     <!-- Kursauswahl -->
     <div class="card mb-3">
       <div class="card-body">
@@ -10,6 +32,7 @@
             v-model="selectedCourse"
             class="form-select form-select-lg"
             @change="loadCourseData"
+            :disabled="!selectedPeriodId || loading"
         >
           <option :value="null">Bitte Kurs wählen...</option>
           <option
@@ -213,6 +236,12 @@ const { $authFetch } = useNuxtApp()
 const toastStore = useToastStore()
 const errorStore = useErrorStore()
 
+interface Period {
+  id: number
+  name: string
+  current: boolean
+}
+
 interface Course {
   id: number
   courseId: string
@@ -247,12 +276,15 @@ interface Feedback {
   info?: string[]
 }
 
+const periods = ref<Period[]>([])
+const selectedPeriodId = ref<number | null>(null)
 const instructorCourses = ref<Course[]>([])
 const selectedCourse = ref<Course | null>(null)
 const currentAssignments = ref<Assignment[]>([])
 const allUsers = ref<User[]>([])
 const filteredStudents = ref<User[]>([])
 const searchQuery = ref('')
+const loadingPeriods = ref(false)
 const loading = ref(false)
 const loadingUsers = ref(false)
 const adding = ref(false)
@@ -285,7 +317,7 @@ const sortedAssignments = computed(() => {
   })
 })
 
-// Kurse des Kursleiters und alle Benutzer laden
+// Initial laden: Phasen, Benutzer, dann Kurse der Default-Phase
 onMounted(async () => {
   // Bootstrap Modal initialisieren
   if (process.client && deleteModal.value) {
@@ -293,24 +325,70 @@ onMounted(async () => {
     deleteModalInstance = new Modal(deleteModal.value)
   }
 
-  try {
-    loading.value = true
-    loadingUsers.value = true
+  await Promise.all([loadPeriods(), loadUsers()])
 
-    const [courses, users] = await Promise.all([
-      $authFetch('/courses/instructedbyme'),
-      $authFetch('/users')
-    ])
-
-    instructorCourses.value = courses
-    allUsers.value = users
-  } catch (err: any) {
-    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Daten')
-  } finally {
-    loading.value = false
-    loadingUsers.value = false
+  if (selectedPeriodId.value) {
+    await loadCourses()
   }
 })
+
+async function loadPeriods() {
+  try {
+    loadingPeriods.value = true
+    periods.value = await $authFetch('/periods')
+
+    // Default: aktuelle Phase vorauswählen, sonst erste Phase
+    const current = periods.value.find(p => p.current)
+    if (current) {
+      selectedPeriodId.value = current.id
+    } else if (periods.value.length > 0) {
+      selectedPeriodId.value = periods.value[0].id
+    }
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Phasen')
+  } finally {
+    loadingPeriods.value = false
+  }
+}
+
+async function loadUsers() {
+  try {
+    loadingUsers.value = true
+    allUsers.value = await $authFetch('/users')
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Benutzer')
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+async function loadCourses() {
+  if (!selectedPeriodId.value) return
+
+  try {
+    loading.value = true
+    instructorCourses.value = await $authFetch(
+        `/courses/instructedbyme?period-id=${selectedPeriodId.value}`
+    )
+  } catch (err: any) {
+    errorStore.show(err?.data?.message ?? 'Fehler beim Laden der Kurse')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onPeriodChange() {
+  // Abhängigen State zurücksetzen
+  selectedCourse.value = null
+  currentAssignments.value = []
+  filteredStudents.value = []
+  searchQuery.value = ''
+  instructorCourses.value = []
+
+  if (selectedPeriodId.value) {
+    await loadCourses()
+  }
+}
 
 // Kursdaten laden (Zuweisungen)
 const loadCourseData = async () => {
