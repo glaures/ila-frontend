@@ -447,7 +447,8 @@ const addStudent = async (student: User) => {
       method: 'POST',
       body: {
         userName: student.userName,
-        courseId: selectedCourse.value.courseId
+        courseId: selectedCourse.value.courseId,
+        periodId: selectedPeriodId.value
       }
     })
 

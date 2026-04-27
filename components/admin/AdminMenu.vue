@@ -13,9 +13,9 @@
         <!-- Menüeinträge der Gruppe -->
         <li v-for="item in group.items" :key="item.to" class="nav-item text-nowrap">
           <NuxtLink
+              :class="{ active: isActive(item) }"
               :to="item.to"
               class="nav-link"
-              :class="{ active: isActive(item) }"
               @click="$emit('navigate')"
           >
             <i :class="item.icon" aria-hidden="true" class="me-1"></i>
@@ -27,8 +27,8 @@
   </nav>
 </template>
 
-<script setup lang="ts">
-import { useRoute } from 'vue-router'
+<script lang="ts" setup>
+import {useRoute} from 'vue-router'
 
 const route = useRoute()
 
@@ -36,28 +36,33 @@ const menuGroups = [
   {
     header: 'Kursangebot',
     items: [
-      { to: '/admin/phasen', label: 'Phasen', icon: 'bi bi-calendar3' },
-      { to: '/admin/bloecke', label: 'Blöcke', icon: 'bi bi-clock-history' },
-      { to: '/admin/kurse', label: 'Kurse', icon: 'bi bi-chat-left-text' },
-      { to: '/admin/block-ausnahmen', label: 'Ausnahmen', icon: 'bi bi-clipboard2-x' },
+      {to: '/admin/phasen', label: 'Phasen', icon: 'bi bi-calendar3'},
+      {to: '/admin/bloecke', label: 'Blöcke', icon: 'bi bi-clock-history'},
+      {to: '/admin/kurse', label: 'Kurse', icon: 'bi bi-chat-left-text'},
+      {to: '/admin/block-ausnahmen', label: 'Ausnahmen', icon: 'bi bi-clipboard2-x'},
     ]
   },
   {
     header: 'Belegungen',
     items: [
-      { to: '/admin/preference-status', label: 'Präferenzen', icon: 'bi bi-folder-check' },
-      { to: '/admin/zuweisungs-prozess', label: 'Zuweisungs-Prozess', icon: 'bi bi-person-lines-fill' },
-      { to: '/admin/users', label: 'Manuelle Anpassungen', icon: 'bi bi-person-lines-fill' },
-      { to: '/admin/problems', label: 'Belegungsprobleme', icon: 'bi bi-exclamation-diamond' },
-      { to: '/admin/belegungen', label: 'Belegungsüberblick', icon: 'bi bi-printer' },
-      { to: '/admin/wechselrunde', label: 'Wechselrunde', icon: 'bi bi-arrow-left-right' },
+      {to: '/admin/preference-status', label: 'Präferenzen', icon: 'bi bi-folder-check'},
+      {to: '/admin/zuweisungs-prozess', label: 'Zuweisungs-Prozess', icon: 'bi bi-person-lines-fill'},
+      {to: '/admin/users', label: 'Manuelle Anpassungen', icon: 'bi bi-person-lines-fill'},
+      {to: '/admin/problems', label: 'Belegungsprobleme', icon: 'bi bi-exclamation-diamond'},
+      {to: '/admin/belegungen', label: 'Belegungsüberblick', icon: 'bi bi-printer'},
+      {to: '/admin/wechselrunde', label: 'Wechselrunde', icon: 'bi bi-arrow-left-right'},
     ]
   },
   {
     header: 'Extras',
     items: [
-      { to: '/admin/nutzerverwaltung', label: 'Externe Nutzer', icon: 'bi bi-person-fill-lock' },
-      { to: '/admin/beste-schule-abwesenheiten', label: 'Beste Schule Abwesenheiten', icon: 'bi bi-arrow-up-right-square' },
+      {to: '/admin/schueler', label: 'Schüler', icon: 'bi bi-mortarboard'},
+      {to: '/admin/nutzerverwaltung', label: 'Externe Nutzer', icon: 'bi bi-person-fill-lock'},
+      {
+        to: '/admin/beste-schule-abwesenheiten',
+        label: 'Beste Schule Abwesenheiten',
+        icon: 'bi bi-arrow-up-right-square'
+      },
     ]
   }
 ]
@@ -72,6 +77,7 @@ function isActive(item: { to: string }) {
 .nav-pills .nav-link {
   border-radius: .5rem;
 }
+
 .nav-pills .nav-link.active {
   color: #fff;
 }
