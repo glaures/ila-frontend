@@ -191,7 +191,7 @@
               <div>
                 <strong>{{ entry.firstName }} {{ entry.lastName }}</strong>
                 <br>
-                <small class="text-muted">Klasse {{ entry.grade }}</small>
+                <small class="text-muted">Klasse {{ entry.schoolClass }}</small>
               </div>
               <div class="form-check form-switch">
                 <input
@@ -337,6 +337,11 @@ interface AttendanceEntry {
   grade: number
   present: boolean
   note: string | null
+}
+
+interface UpdateAttendanceEntriesResult {
+  entries: AttendanceEntry[]
+  warnings: string[]
 }
 
 // State
@@ -539,13 +544,28 @@ async function saveEntries() {
       note: e.note
     }))
 
-    await $authFetch(`/attendance/sessions/${selectedSession.value.id}/entries`, {
-      method: 'PUT',
-      body: updateRequests
-    })
+    const result: UpdateAttendanceEntriesResult = await $authFetch(
+        `/attendance/sessions/${selectedSession.value.id}/entries`,
+        {
+          method: 'PUT',
+          body: updateRequests
+        }
+    )
 
+    // Aktualisierte Einträge vom Backend übernehmen, damit die Anzeige
+    // mit dem persistierten Stand (z.B. zurückgesetzte besteSchuleAbsenceId
+    // nach Storno) konsistent ist.
+    entries.value = result.entries
     isDirty.value = false
-    toastStore.success('Anwesenheiten gespeichert')
+
+    // Warnungen vom Backend als einzelne Toasts anzeigen — z.B. wenn
+    // extern (über Eltern in Beste.Schule) gemeldete Abwesenheiten nicht
+    // aus iLA heraus entfernt werden konnten.
+    if (result.warnings && result.warnings.length > 0) {
+      result.warnings.forEach(msg => toastStore.warning(msg))
+    } else {
+      toastStore.success('Anwesenheiten gespeichert')
+    }
 
     // Session-Statistik aktualisieren
     await loadSessions()

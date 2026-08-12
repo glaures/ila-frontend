@@ -17,9 +17,15 @@ export const categoryLabelMap: Record<CategoryCode, string> = {
     SoL: 'Selbstorganisiertes Lernen'
 }
 
+/** Schreibweise vereinheitlichen – das Backend liefert z. B. "SOL" statt "SoL" */
+export function normalizeCategoryCode(code: string): CategoryCode | string {
+    const match = categoryList.find(c => c.toLowerCase() === code?.toLowerCase())
+    return match ?? code
+}
+
 /** Hilfsfunktion: alle Infos zu einer Kategorie holen */
 export function getCategoryInfo(code: string) {
-    const c = code as CategoryCode
+    const c = normalizeCategoryCode(code) as CategoryCode
     return {
         code,
         label: categoryLabelMap[c] ?? code,

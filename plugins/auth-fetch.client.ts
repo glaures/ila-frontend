@@ -26,7 +26,9 @@ export default defineNuxtPlugin((nuxtApp) => {
                 errorStore.show('Du musst Dich erneut einloggen, da es ein Problem mit Deiner Anmeldung gab.')
             } else {
                 const body = (response as any)._data
-                errorStore.show(body.message)
+                errorStore.show(
+                    body?.message ?? `Unerwarteter Fehler (HTTP ${response.status})`
+                )
             }
         }
     })

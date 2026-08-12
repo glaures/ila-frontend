@@ -384,6 +384,10 @@ function onBlockChange(ev: Event) {
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="h4 m-0">Kurse</div>
       <div>
+        <NuxtLink class="btn btn-outline-success me-2" to="/admin/kurs-import">
+          <i class="bi bi-file-earmark-excel me-1"></i>
+          Excel Import
+        </NuxtLink>
         <button class="btn btn-outline-secondary me-2" @click="newCourse">Neuer Kurs</button>
         <button class="btn btn-outline-danger me-2" :disabled="!form.id" @click="deleteCourse">Löschen</button>
         <button class="btn btn-outline-primary me-2" :disabled="!form.id" @click="manageCourseParticipants">
