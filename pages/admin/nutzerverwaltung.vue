@@ -180,6 +180,9 @@
                 <div v-if="isEditMode" class="form-text">
                   Der Benutzername kann nicht geändert werden
                 </div>
+                <div v-else class="form-text">
+                  Wird kleingeschrieben, Leerzeichen und Kommata werden zu Bindestrichen.
+                </div>
               </div>
 
               <div class="mb-3">
