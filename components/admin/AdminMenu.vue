@@ -39,6 +39,7 @@ const menuGroups = [
       {to: '/admin/phasen', label: 'Phasen', icon: 'bi bi-calendar3'},
       {to: '/admin/bloecke', label: 'Blöcke', icon: 'bi bi-clock-history'},
       {to: '/admin/kurse', label: 'Kurse', icon: 'bi bi-chat-left-text'},
+      {to: '/admin/kurs-liste', label: 'Kursübersicht', icon: 'bi bi-table'},
       {to: '/admin/block-ausnahmen', label: 'Ausnahmen', icon: 'bi bi-clipboard2-x'},
       {to: '/admin/kurs-import', label: 'Kurse importieren', icon: 'bi bi-file-earmark-excel'},
     ]

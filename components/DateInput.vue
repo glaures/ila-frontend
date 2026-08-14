@@ -1,15 +1,15 @@
 <template>
   <div>
     <input
-        :value="displayValue"
+        :value="isoValue"
         @input="onInput($event.target.value)"
-        type="text"
+        type="date"
         class="form-control"
-        :placeholder="placeholder"
-        :class="{ 'is-invalid': !isValid && modelValue }"
+        :required="required"
+        :class="{ 'is-invalid': !isValid }"
     />
-    <div v-if="!isValid && modelValue" class="invalid-feedback">
-      Bitte ein gültiges Datum im Format TT.MM.JJJJ eingeben.
+    <div v-if="!isValid" class="invalid-feedback">
+      Bitte ein gültiges Datum wählen.
     </div>
   </div>
 </template>
@@ -19,10 +19,6 @@ import { computed } from 'vue'
 
 const props = defineProps({
   modelValue: String,
-  placeholder: {
-    type: String,
-    default: 'TT.MM.JJJJ'
-  },
   required: {
     type: Boolean,
     default: false
@@ -31,24 +27,30 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const normalizeDate = (str) => {
-  const match = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
-  if (!match) return str
-  const [_, d, m, y] = match
-  const dd = d.padStart(2, '0')
-  const mm = m.padStart(2, '0')
-  return `${dd}.${mm}.${y}`
+/** "dd.MM.yyyy" -> "yyyy-MM-dd" (leer, wenn nicht parsebar) */
+const germanToIso = (val) => {
+  const match = (val || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+  if (!match) return ''
+  const [, d, m, y] = match
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
 }
+
+/** "yyyy-MM-dd" -> "dd.MM.yyyy" (leer, wenn nicht parsebar) */
+const isoToGerman = (val) => {
+  const match = (val || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return ''
+  const [, y, m, d] = match
+  return `${d}.${m}.${y}`
+}
+
+const isoValue = computed(() => germanToIso(props.modelValue))
 
 const onInput = (val) => {
-  const normalized = normalizeDate(val)
-  emit('update:modelValue', normalized)
+  emit('update:modelValue', isoToGerman(val))
 }
 
-const displayValue = computed(() => props.modelValue)
-
 const isValid = computed(() => {
-  if (!props.modelValue && !props.required) return true
+  if (!props.modelValue) return !props.required
   return /^\d{2}\.\d{2}\.\d{4}$/.test(props.modelValue)
 })
 </script>

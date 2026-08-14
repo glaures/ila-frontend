@@ -140,13 +140,13 @@
               </p>
               <div class="row g-3">
                 <div class="col-sm-6">
-                  <label class="form-label">Start (TT.MM.JJJJ)</label>
-                  <DateInput v-model="form.startDate" placeholder="01.09.2025" required="true"/>
+                  <label class="form-label">Start</label>
+                  <DateInput v-model="form.startDate" :required="true" />
                 </div>
 
                 <div class="col-sm-6">
-                  <label class="form-label">Ende (TT.MM.JJJJ)</label>
-                  <DateInput v-model="form.endDate" placeholder="31.01.2026" />
+                  <label class="form-label">Ende</label>
+                  <DateInput v-model="form.endDate" />
                 </div>
               </div>
             </fieldset>

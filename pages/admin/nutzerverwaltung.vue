@@ -46,11 +46,12 @@
                   <th>Nachname</th>
                   <th>E-Mail</th>
                   <th>Rollen</th>
+                  <th>Status</th>
                   <th class="text-end">Aktionen</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr v-for="user in users" :key="user.userName">
+                <tr v-for="user in users" :key="user.userName" :class="{ 'table-secondary': user.disabled }">
                   <td>
                     <strong>{{ user.userName }}</strong>
                   </td>
@@ -66,13 +67,33 @@
                         {{ formatRole(role) }}
                       </span>
                   </td>
+                  <td>
+                    <span v-if="user.disabled" class="badge bg-danger">deaktiviert</span>
+                    <span v-else class="badge bg-success">aktiv</span>
+                  </td>
                   <td class="text-end">
                     <button
-                        class="btn btn-sm btn-outline-primary"
+                        class="btn btn-sm btn-outline-primary me-1"
                         @click="openEditModal(user)"
                         title="Bearbeiten"
                     >
                       <i class="bi bi-pencil"></i>
+                    </button>
+                    <button
+                        v-if="!user.disabled"
+                        class="btn btn-sm btn-outline-danger"
+                        @click="openDisableModal(user, true)"
+                        title="Deaktivieren"
+                    >
+                      <i class="bi bi-person-slash"></i>
+                    </button>
+                    <button
+                        v-else
+                        class="btn btn-sm btn-outline-success"
+                        @click="openDisableModal(user, false)"
+                        title="Reaktivieren"
+                    >
+                      <i class="bi bi-person-check"></i>
                     </button>
                   </td>
                 </tr>
@@ -162,23 +183,29 @@
               </div>
 
               <div class="mb-3">
-                <label for="firstName" class="form-label">Vorname</label>
+                <label for="firstName" class="form-label">
+                  Vorname <span class="text-danger">*</span>
+                </label>
                 <input
                     id="firstName"
                     v-model="formData.firstName"
                     type="text"
                     class="form-control"
+                    required
                     placeholder="Max"
                 />
               </div>
 
               <div class="mb-3">
-                <label for="lastName" class="form-label">Nachname</label>
+                <label for="lastName" class="form-label">
+                  Nachname <span class="text-danger">*</span>
+                </label>
                 <input
                     id="lastName"
                     v-model="formData.lastName"
                     type="text"
                     class="form-control"
+                    required
                     placeholder="Mustermann"
                 />
               </div>
@@ -241,6 +268,68 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal für Deaktivieren / Reaktivieren -->
+    <div
+        class="modal fade"
+        ref="disableModal"
+        tabindex="-1"
+        aria-labelledby="disableModalLabel"
+        aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="disableModalLabel">
+              {{ disableTarget ? 'Nutzer deaktivieren' : 'Nutzer reaktivieren' }}
+            </h5>
+            <button
+                type="button"
+                class="btn-close"
+                @click="closeDisableModal"
+                aria-label="Schließen"
+            ></button>
+          </div>
+          <div class="modal-body" v-if="userToDisable">
+            <p>
+              Soll der Nutzer
+              <strong>{{ displayName(userToDisable) }}</strong>
+              ({{ userToDisable.userName }})
+              {{ disableTarget ? 'deaktiviert' : 'wieder aktiviert' }} werden?
+            </p>
+            <div v-if="disableTarget" class="alert alert-warning mb-0">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              Der Nutzer kann sich danach nicht mehr anmelden. Bestehende Kurse und
+              Zuordnungen bleiben erhalten – ein deaktivierter Kursleiter bleibt also
+              an seinen Kursen eingetragen und sollte dort ggf. ersetzt werden.
+            </div>
+            <div v-else class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+              Der Nutzer kann sich anschließend wieder anmelden.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeDisableModal">
+              Abbrechen
+            </button>
+            <button
+                type="button"
+                :class="disableTarget ? 'btn btn-danger' : 'btn btn-success'"
+                @click="confirmDisable"
+                :disabled="disabling"
+            >
+              <span
+                  v-if="disabling"
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+              ></span>
+              {{ disableTarget ? 'Deaktivieren' : 'Reaktivieren' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -257,6 +346,7 @@ interface User {
   lastName?: string
   email?: string
   roles: string[]
+  disabled?: boolean
 }
 
 interface UserPayload {
@@ -282,6 +372,12 @@ const hasNextPage = ref(true)
 const isEditMode = ref(false)
 const userModal = ref<HTMLElement | null>(null)
 let modalInstance: Modal | null = null
+
+const disabling = ref(false)
+const userToDisable = ref<User | null>(null)
+const disableTarget = ref(true) // true = deaktivieren, false = reaktivieren
+const disableModal = ref<HTMLElement | null>(null)
+let disableModalInstance: Modal | null = null
 
 const formData = ref<UserPayload>({
   login: '',
@@ -372,10 +468,68 @@ function closeModal() {
   }
 }
 
+function displayName(user: User): string {
+  const name = [user.firstName, user.lastName].filter(Boolean).join(' ')
+  return name || user.userName
+}
+
+function openDisableModal(user: User, disabled: boolean) {
+  userToDisable.value = user
+  disableTarget.value = disabled
+  if (disableModal.value) {
+    disableModalInstance = Modal.getOrCreateInstance(disableModal.value)
+    disableModalInstance.show()
+  }
+}
+
+function closeDisableModal() {
+  disableModalInstance?.hide()
+}
+
+async function confirmDisable() {
+  const user = userToDisable.value
+  if (!user) return
+
+  const disabled = disableTarget.value
+  disabling.value = true
+  try {
+    const updated = await $authFetch<User>(
+        `/users/${encodeURIComponent(user.userName)}/disabled`,
+        {
+          method: 'POST',
+          body: { disabled },
+        }
+    )
+    // Lokal aktualisieren statt komplett neu laden
+    const idx = users.value.findIndex(u => u.userName === user.userName)
+    if (idx !== -1) {
+      users.value[idx] = { ...users.value[idx], ...updated }
+    }
+    toastStore.success(
+        disabled
+            ? `${displayName(user)} wurde deaktiviert`
+            : `${displayName(user)} wurde reaktiviert`
+    )
+    closeDisableModal()
+    userToDisable.value = null
+  } catch (err: any) {
+    errorStore.show(
+        err?.data?.message ?? 'Fehler beim Ändern des Nutzerstatus: ' + err
+    )
+  } finally {
+    disabling.value = false
+  }
+}
+
 async function saveUser() {
   // Validierung
   if (!formData.value.login?.trim()) {
     toastStore.error('Bitte geben Sie einen Benutzernamen ein')
+    return
+  }
+
+  if (!formData.value.firstName?.trim() || !formData.value.lastName?.trim()) {
+    toastStore.error('Bitte geben Sie Vor- und Nachnamen ein')
     return
   }
 
@@ -429,6 +583,11 @@ async function saveUser() {
 // Lifecycle
 onMounted(() => {
   loadUsers()
+})
+
+onBeforeUnmount(() => {
+  disableModalInstance?.dispose()
+  modalInstance?.dispose()
 })
 </script>
 

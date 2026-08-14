@@ -185,7 +185,7 @@
 
       <!-- Teilnehmerliste mit Anwesenheitsstatus -->
       <div v-else-if="entries.length > 0" class="attendee-list">
-        <div class="card mb-2" v-for="entry in sortedEntries" :key="entry.userName">
+        <div v-for="entry in sortedEntries" :key="entry.userName" class="card mb-2">
           <div class="card-body py-2">
             <div class="d-flex justify-content-between align-items-center">
               <div>
@@ -334,6 +334,7 @@ interface AttendanceEntry {
   userName: string
   firstName: string
   lastName: string
+  schoolClass: string
   grade: number
   present: boolean
   note: string | null

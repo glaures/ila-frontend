@@ -124,6 +124,11 @@ async function onCommit() {
         bestehenden Block zu. Die Zielphase muss ihre Blöcke also bereits besitzen –
         andernfalls schlagen die betroffenen Zeilen fehl.
         <NuxtLink to="/admin/bloecke">Blöcke verwalten</NuxtLink>
+        <div class="mt-1">
+          Als Startdatei lässt sich in der
+          <NuxtLink to="/admin/kurs-liste">Kursübersicht</NuxtLink>
+          eine Import-Vorlage aus den Kursen einer bestehenden Phase herunterladen.
+        </div>
       </div>
     </div>
 
