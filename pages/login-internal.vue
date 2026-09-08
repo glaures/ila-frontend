@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { useErrorStore } from '~/stores/error'
 import { useToastStore } from '~/stores/toast'
+import { clearAdminSession } from '~/composables/useImpersonation'
 
 definePageMeta({
   authDisabled: true,
@@ -61,11 +62,14 @@ async function handleLogin() {
 
     // Token speichern
     localStorage.setItem('jwt', token)
+    // Ein frischer Login beendet eine evtl. noch gespeicherte Impersonation
+    clearAdminSession()
 
     // Username im Store setzen
     userStore.setUsername(user.username)
     userStore.setName(user.name)
     userStore.setRoles(roles)
+    userStore.setImpersonatedBy(null)
 
     // Erfolgsmeldung
     toastStore.success('Erfolgreich angemeldet!')

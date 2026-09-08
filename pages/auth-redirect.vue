@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 import { useErrorStore } from '~/stores/error'
 import { useUserStore } from '~/stores/user'
+import { clearAdminSession } from '~/composables/useImpersonation'
 
 const route = useRoute()
 const errorStore = useErrorStore()
@@ -18,9 +19,12 @@ if (code) {
       body: { code, redirectUri }
     })
     localStorage.setItem('jwt', token)
+    // Ein frischer Login beendet eine evtl. noch gespeicherte Impersonation
+    clearAdminSession()
     userStore.setUsername(user.preferred_username)
     userStore.setName(user.name)
     userStore.setRoles(roles)
+    userStore.setImpersonatedBy(null)
 
     // Redirect basierend auf Rolle
     if (roles.includes('ADMIN')) {

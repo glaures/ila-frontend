@@ -1,7 +1,13 @@
 import { usePinia } from '#imports'
+import { IMPERSONATION_EXPIRED_KEY, restoreAdminSession } from '~/composables/useImpersonation'
 
 export default defineNuxtPlugin((nuxtApp) => {
     const config = useRuntimeConfig()
+
+    function absolute(path: string) {
+        const base = (config.app?.baseURL ?? '/').replace(/\/$/, '')
+        return `${base}${path}`
+    }
 
     const authFetch = $fetch.create({
         baseURL: config.public.apiBase,
@@ -21,8 +27,16 @@ export default defineNuxtPlugin((nuxtApp) => {
             console.error("Fehler im authFetch: " + response)
             const errorStore = useErrorStore(usePinia())
             if (response.status === 401) {
+                // Impersonation-Token läuft nach 1h ab: zurück zur Admin-Sitzung
+                // statt den Admin auf den Login-Screen zu werfen.
+                if (restoreAdminSession(usePinia())) {
+                    // Hinweis überlebt den folgenden Reload
+                    sessionStorage.setItem(IMPERSONATION_EXPIRED_KEY, '1')
+                    window.location.href = absolute('/admin')
+                    return
+                }
                 localStorage.removeItem('jwt')
-                window.location.href = '/'
+                window.location.href = absolute('/')
                 errorStore.show('Du musst Dich erneut einloggen, da es ein Problem mit Deiner Anmeldung gab.')
             } else {
                 const body = (response as any)._data

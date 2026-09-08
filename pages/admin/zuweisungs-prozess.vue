@@ -84,7 +84,26 @@
         <!-- Historical Results -->
         <div v-if="selectedPeriodId && historicalResults.length > 0 && !viewingHistorical" class="card">
           <div class="card-body">
-            <h5 class="card-title">Frühere Zuweisungen</h5>
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <h5 class="card-title mb-0">Frühere Zuweisungen</h5>
+              <button
+                  v-if="canDiscardAssignments"
+                  class="btn btn-sm btn-outline-danger text-nowrap"
+                  :disabled="hasFinalizedResult || isDiscarding"
+                  :title="hasFinalizedResult
+                    ? 'Der Lauf ist bereits finalisiert und kann nicht mehr verworfen werden.'
+                    : 'Löscht die automatisch erzeugten Zuweisungen dieser Phase'"
+                  @click="discardAssignments"
+              >
+                <span v-if="isDiscarding" class="spinner-border spinner-border-sm me-2"></span>
+                <i v-else class="bi bi-eraser me-1"></i>
+                Vergabelauf verwerfen
+              </button>
+            </div>
+            <p v-if="hasFinalizedResult" class="text-muted small">
+              <i class="bi bi-info-circle me-1"></i>
+              Der Vergabelauf ist finalisiert – die Zuweisungen können nicht mehr verworfen werden.
+            </p>
             <div v-if="loadingHistory" class="text-center py-3">
               <div class="spinner-border spinner-border-sm"></div>
               <span class="ms-2">Lade Historie...</span>
@@ -220,6 +239,42 @@
       </div>
     </div>
 
+    <!-- Discard Assignments Confirmation Modal -->
+    <div
+        ref="discardModalRef"
+        class="modal fade"
+        tabindex="-1"
+        aria-labelledby="discardModalLabel"
+        aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 id="discardModalLabel" class="modal-title">Vergabelauf verwerfen</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Alle <strong>automatisch erzeugten</strong> Zuweisungen dieser Phase werden gelöscht.
+              Von Hand gesetzte Zuweisungen bleiben erhalten.
+            </p>
+            <div class="alert alert-warning mb-0">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Offene Wechselwünsche zu den gelöschten Zuweisungen entfallen. Dieser Schritt kann
+              nicht rückgängig gemacht werden. Ein erneuter Lauf führt außerdem nicht zum selben
+              Ergebnis – die Optimierung arbeitet mit Zufallstauschen.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+            <button type="button" class="btn btn-danger" @click="confirmDiscardAssignments">
+              Zuweisungen löschen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Finalize Confirmation Modal -->
     <div
         ref="finalizeModalRef"
@@ -282,6 +337,7 @@ definePageMeta({
 
 const { $authFetch } = useNuxtApp() as any
 const toastStore = useToastStore()
+const userStore = useUserStore()
 const { isAssigning, assignmentResult, assignCourses } = useAssignment()
 
 // Load periods
@@ -298,9 +354,14 @@ const currentHistoricalResult = ref<AssignmentResultData | null>(null)
 const assignmentModalRef = ref<HTMLElement | null>(null)
 const deleteModalRef = ref<HTMLElement | null>(null)
 const finalizeModalRef = ref<HTMLElement | null>(null)
+const discardModalRef = ref<HTMLElement | null>(null)
 let assignmentModal: Modal | null = null
 let deleteModal: Modal | null = null
 let finalizeModal: Modal | null = null
+let discardModal: Modal | null = null
+
+// Vergabelauf verwerfen (DELETE /periods/{id}/assign-courses)
+const isDiscarding = ref(false)
 
 // Delete confirmation state
 const resultToDelete = ref<AssignmentResultData | null>(null)
@@ -326,6 +387,11 @@ const isLatestResult = computed(() => {
 // Check if there's any finalized result
 const hasFinalizedResult = computed(() => {
   return historicalResults.value.some(result => result.finalized)
+})
+
+// Verwerfen nur für Admins und nur, wenn es überhaupt einen Lauf gibt
+const canDiscardAssignments = computed(() => {
+  return userStore.isAdmin() && !!selectedPeriodId.value && historicalResults.value.length > 0
 })
 
 const loadPeriods = async () => {
@@ -436,6 +502,44 @@ const confirmDelete = async () => {
   }
 }
 
+const discardAssignments = () => {
+  if (!selectedPeriodId.value || hasFinalizedResult.value || !discardModal) return
+  discardModal.show()
+}
+
+const confirmDiscardAssignments = async () => {
+  if (!selectedPeriodId.value || !discardModal) return
+
+  discardModal.hide()
+  isDiscarding.value = true
+
+  try {
+    const feedback = await $authFetch(`/periods/${selectedPeriodId.value}/assign-courses`, {
+      method: 'DELETE'
+    })
+
+    // Die Anzahl der gelöschten Zuweisungen steht ausschließlich in info[0]
+    toastStore.success(feedback?.info?.[0] ?? 'Die automatisch erzeugten Zuweisungen wurden gelöscht.')
+
+    // Die Kennzahlen der Läufe beziehen sich jetzt auf einen Stand, den es nicht mehr gibt.
+    // Die Historie selbst bleibt bewusst stehen (eigener Aufruf zum Aufräumen).
+    assignmentResult.value = null
+    clearHistoricalView()
+    await loadHistoricalResults()
+  } catch (err: any) {
+    console.error('Fehler beim Verwerfen des Vergabelaufs:', err)
+    const errorStore = useErrorStore()
+    // Auf code prüfen, nicht auf den HTTP-Status – viele fachliche Fehler kommen als 500
+    if (err?.data?.code === 'AssignmentsAlreadyFinalized') {
+      // Zustand hat sich offenbar geändert: Historie neu laden, damit der Button ausgraut
+      await loadHistoricalResults()
+    }
+    errorStore.show(err?.data?.message ?? 'Fehler beim Verwerfen des Vergabelaufs')
+  } finally {
+    isDiscarding.value = false
+  }
+}
+
 const markAsFinal = (result: AssignmentResultData) => {
   if (!finalizeModal) return
   resultToFinalize.value = result
@@ -513,6 +617,9 @@ onMounted(() => {
   }
   if (finalizeModalRef.value) {
     finalizeModal = new Modal(finalizeModalRef.value)
+  }
+  if (discardModalRef.value) {
+    discardModal = new Modal(discardModalRef.value)
   }
 })
 </script>

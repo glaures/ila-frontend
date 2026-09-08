@@ -1,13 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2024-11-01',
     devtools: {enabled: true},
 
     modules: [
-        '@nuxt/content',
         '@nuxt/eslint',
         '@nuxt/fonts',
         '@nuxt/icon',
@@ -27,16 +23,16 @@ export default defineNuxtConfig({
     },
     nitro: {
         preset: "gh-pages"
+        // 200.html/404.html werden von Nitro beim `nuxt generate` automatisch
+        // vorgerendert (SPA-Fallback), siehe Prerender-Log.
     },
-    hooks: {
-        close: () => {
-            const publicDir = path.resolve('.output/public');
-            const indexFile = path.join(publicDir, 'index.html');
-            const spaFile = path.join(publicDir, '200.html');
-
-            if (fs.existsSync(indexFile)) {
-                fs.copyFileSync(indexFile, spaFile);
-                console.log('✅ 200.html erzeugt für SPA-Routing');
+    // Der Dev-Server löscht beim (Neu-)Start sein Nitro-Output-Verzeichnis.
+    // Ohne diese Umleitung wäre das `.output` – ein laufender `npm run dev`
+    // räumt dann mitten im `npm run deploy` das fertige Build-Ergebnis weg.
+    $development: {
+        nitro: {
+            output: {
+                dir: '.nuxt/dev-output'
             }
         }
     },

@@ -61,6 +61,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useUserStore } from "~/stores/user.js"
+import { clearAdminSession } from "~/composables/useImpersonation"
 
 const userStore = useUserStore()
 
@@ -79,6 +80,8 @@ const avatarUrl = ref('/images/avatar_placeholder.png')
 
 function logout() {
   localStorage.removeItem('jwt')
+  // Auch eine gesicherte Admin-Sitzung verwerfen (Impersonation)
+  clearAdminSession()
   userStore.clear()
   window.location.href = '/'
 }
