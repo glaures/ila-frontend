@@ -25,6 +25,7 @@ type UserDto = {
   gender: string
   ilaMember: boolean
   roles: string[]
+  disabled?: boolean
 }
 
 type CourseDto = {
@@ -72,9 +73,18 @@ const selectedInstructorUserName = ref<string | null>(null)  // NEU: Ausgewählt
 const showDeleteModal = ref(false)
 const assignmentCount = ref(0)
 
-// --- Verfügbare Kursleiter (Nutzer ohne STUDENT-Rolle) ---
+// --- Verfügbare Kursleiter (aktive Kursleiter und Admins, nach Nachname sortiert) ---
+// Der aktuell eingetragene Kursleiter bleibt immer auswählbar, damit die Zuordnung
+// beim Speichern nicht verloren geht, falls er die Rolle inzwischen nicht mehr hat.
 const availableInstructors = computed(() => {
-  return users.value.filter(user => !user.roles.includes('STUDENT'))
+  return users.value
+      .filter(user =>
+          user.userName === selectedInstructorUserName.value ||
+          (!user.disabled &&
+              (user.roles.includes('COURSE_INSTRUCTOR') || user.roles.includes('ADMIN'))))
+      .sort((a, b) =>
+          (a.lastName ?? '').localeCompare(b.lastName ?? '', 'de') ||
+          (a.firstName ?? '').localeCompare(b.firstName ?? '', 'de'))
 })
 
 // --- Typeahead ---
@@ -471,7 +481,7 @@ function onBlockChange(ev: Event) {
                   :key="user.userName"
                   :value="user.userName"
               >
-                {{ user.firstName }} {{ user.lastName }} ({{ user.userName }})
+                {{ user.lastName }}, {{ user.firstName }} ({{ user.userName }})
               </option>
             </select>
             <div class="form-text">Nur Lehrer und Admins</div>
